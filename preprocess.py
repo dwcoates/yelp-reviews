@@ -1,6 +1,15 @@
 #! /usr/bin/python2.7
+# -*- coding: utf-8 -*-
+
+"""
+Script for converting all of the json data in ./data/json_origin/ to csv
+files in the ./data/ directory.
+"""
+
 import json
 import csv
+
+__author__ = "Dodge W. Coates"
 
 
 def _findkey(obj, key):
@@ -87,6 +96,7 @@ def csvify_to_file(headers, infile, outfile):
 # Convert the businesses file to csv
 business_file = "data/json_origin/yelp_academic_dataset_business.json"
 bus_headers = allkeys(business_file,
+                      # Don't care about this stuff
                       noinc=["Ambience", "Good For", "hours", "Parking"])
 csvify_to_file(bus_headers, business_file, "data/business.csv")
 
