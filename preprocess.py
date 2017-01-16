@@ -94,6 +94,7 @@ def csvify_to_file(headers, infile, outfile):
 
 
 # Convert the businesses file to csv
+print("[1/5] Converting 'business' json file to csv...")
 business_file = "data/json_origin/yelp_academic_dataset_business.json"
 bus_headers = allkeys(business_file,
                       # Don't care about this stuff
@@ -102,21 +103,25 @@ csvify_to_file(bus_headers, business_file, "data/business.csv")
 
 
 # Convert the check-ins file to csv
+print("[2/5] Converting 'checkin' json file to csv...")
 checkin_file = "data/json_origin/yelp_academic_dataset_checkin.json"
 checkin_headers = allkeys(checkin_file)
 csvify_to_file(checkin_headers, checkin_file, "data/checkin.csv")
 
 # Convert the reviews file to csv
+print("[3/5] Converting (big) 'review' json file to csv...")
 review_file = "data/json_origin/yelp_academic_dataset_review.json"
 review_headers = allkeys(review_file)
 csvify_to_file(review_headers, review_file, "data/review.csv")
 
 # Convert the tips file to csv
+print("[4/5] Converting 'tip' json file to csv...")
 tip_file = "data/json_origin/yelp_academic_dataset_tip.json"
 tip_headers = allkeys(tip_file)
 csvify_to_file(tip_headers, tip_file, "data/tip.csv")
 
 # Convert the users file to csv
+print("[5/5] Converting 'user' json file to csv...")
 user_file = "data/json_origin/yelp_academic_dataset_user.json"
 user_headers = allkeys(user_file)
 csvify_to_file(user_headers, user_file, "data/user.csv")
