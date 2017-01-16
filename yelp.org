@@ -1,0 +1,24 @@
+* Init
+Necessary libraries
+#+BEGIN_SRC R :session :exports none results none
+  library(ggplot)
+#+END_SRC
+
+#+RESULTS:
+
+Load up data and keep track of time. Time to go get a coffee...
+#+BEGIN_SRC R :session :exports none :results none
+  reviews_t = system.time(reviews <- read.csv("./data/review.csv"))
+  tips_t = system.time(tips <- read.csv("./data/tip.csv"))
+  business_t = system.time(business <- read.csv("./data/business.csv"))
+  users_t = system.time(users <- read.csv("./data/user.csv"))
+  checkins_t = system.time(checkins <- read.csv("./data/checkin.csv"))
+#+END_SRC
+#+BEGIN_SRC R :session :exports results :results output  org drawer 
+  total_load_time <- reviews_t + tips_t + business_t + users_t + checkins_t
+  paste("Minutes to load json data into data.frames: ", total_load_time["elapsed"]/60.0)
+#+END_SRC
+#+RESULTS:
+:RESULTS:
+[1] "Total time to load json data into data.frames:  153.605"
+:END:
