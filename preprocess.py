@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Script for converting all of the json data in ./data/json_origin/ to csv
-files in the ./data/ directory.
+Script for converting all of the json data in ./data/json_origin/
+to csv files in the ./data/ directory.
 """
 
 import json
@@ -12,24 +12,27 @@ import csv
 __author__ = "Dodge W. Coates"
 
 
-def _findkey(obj, key):
+def _findval(obj, key):
     if key in obj:
         return obj[key]
     for k, v in obj.items():
         if isinstance(v, dict):
-            value = _findkey(v, key)
+            value = _findval(v, key)
             if value is not None:
                 return value
 
 
-def findkey(obj, key):
-    v = _findkey(obj, key)
+def findval(obj, key):
+    """
+    Search recursively for key in dict obj
+    """
+    v = _findval(obj, key)
     return v if v is not None else ""
 
 
 def _findallkeys(obj, noinc):
     """
-    Find all terminal keys in this obj
+    Find all terminal keys in this dict obj
     """
     ret = []
     for k in obj.iterkeys():
@@ -58,7 +61,7 @@ def allkeys(ff, noinc=[]):
     keyname orders, this means that iterating over the keys to locate
     values in the json objects (to tranlate a json object to a csv
     line) will be undefined; it could grab the value for either of the
-    conflicting keys on a given findkey call.
+    conflicting keys on a given findval call.
     """
     with open(ff) as dataset:
         j = json.loads(dataset.readline().strip())
@@ -80,17 +83,18 @@ def coerce_to_string(s):
 def csvify_to_file(headers, infile, outfile):
     """
     Flatten the json entry. This is pretty simple, and relies on a bit
-    of preprocessing of the json keys to make sure there are no conflictions.
+    of preprocessing of the json keys to make sure there are no
+    conflictions.
     """
     with open(infile, "r") as ins, open(outfile, "wb") as outs:
         csvwriter = csv.writer(outs)
         csvwriter.writerow(headers)  # write header to top of file
         for line in ins:
             j = json.loads(line)
-            ents = []
+            row = []
             for h in headers:
-                ents += [coerce_to_string(findkey(j, h))]
-            csvwriter.writerow(ents)
+                row += [coerce_to_string(findval(j, h))]
+            csvwriter.writerow(row)
 
 
 # Convert the businesses file to csv
@@ -125,3 +129,5 @@ print("[5/5] Converting 'user' json file to csv...")
 user_file = "data/json_origin/yelp_academic_dataset_user.json"
 user_headers = allkeys(user_file)
 csvify_to_file(user_headers, user_file, "data/user.csv")
+
+print("\nDone.")
