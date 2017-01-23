@@ -3,11 +3,12 @@
 
 """
 Script for converting all of the json data in ./data/json_origin/
-to csv files in the ./data/ directory.
+to csv files in the ./data/ directory. It requires unicodecsv package,
+which can be installed with pip: `pip install unicodecsv`
 """
 
 import json
-import csv
+import unicodecsv as csv
 
 __author__ = "Dodge W. Coates"
 
@@ -73,11 +74,15 @@ def allkeys(ff, noinc=[]):
     return list(s1)
 
 
+# This is useless
 def coerce_to_string(s):
     try:
         return str(s).encode("ascii")
     except:
         return ""
+
+def encode_if_string(s):
+    return str(s).encode('utf-8')
 
 
 def csvify_to_file(headers, infile, outfile):
@@ -93,7 +98,7 @@ def csvify_to_file(headers, infile, outfile):
             j = json.loads(line)
             row = []
             for h in headers:
-                row += [coerce_to_string(findval(j, h))]
+                row += [findval(j, h)]
             csvwriter.writerow(row)
 
 
