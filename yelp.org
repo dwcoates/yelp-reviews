@@ -2,43 +2,132 @@
 Necessary libraries
 #+BEGIN_SRC R :session :exports none :results none
   library(ggplot2)
+  library(data.table)
 #+END_SRC
 
 Load up data and keep track of time. Time to go get a coffee...
-#+BEGIN_SRC R :session :exports none :cache yes
+#+BEGIN_SRC R :session :exports none :cache no
+  read_table <- function(filename) {                                          
+      table <- fread(filename)  # use fread to quickly read csv file
+      # Make sure there aren't any unacceptable chracters in the column names
+      names(table) <- make.names(tolower(names(table)), unique = TRUE)
+      table
+  }
+
   print("Loading reviews...")
-  reviews_t = system.time(reviews <- read.csv("./data/review.csv"))
+  reviews_t = system.time(reviews <- read_table('./data/review.csv'))
+
   print("Loading tip...")
-  tips_t = system.time(tips <- read.csv("./data/tip.csv"))
+  tips_t = system.time(tips <- read_table("./data/tip.csv"))
+
   print("Loading business...")
-  business_t = system.time(business <- read.csv("./data/business.csv"))
+  business_t = system.time(business <- read_table("./data/business.csv"))
+  business <- rename(business, stars.avg = stars) # for pleasant merges with `reviews`
+
   print("Loading user...")
-  users_t = system.time(users <- read.csv("./data/user.csv"))
+  users_t = system.time(users <- read_table("./data/user.csv"))
+
   print("Loading checkin...")
-  checkins_t = system.time(checkins <- read.csv("./data/checkin.csv"))
+  checkins_t = system.time(checkins <- read_table("./data/checkin.csv"))
 #+END_SRC
 
-#+RESULTS[ea02aab2835359a43b5d01087b3f5a152357e2c1]:
+#+RESULTS[0d11075549b28647abcb46b01dd82fcc5ca7adfd]:
 
 #+BEGIN_SRC R :session :exports results :results org
   total_load_time <- reviews_t + tips_t + business_t + users_t + checkins_t
   sprintf("Time to load CSV data into data.frames: %.2f minutes", total_load_time["elapsed"]/60.0)
 #+END_SRC
+
 #+RESULTS:
 #+BEGIN_SRC org
-Time to load CSV data into data.frames: 4.91 minutes
+Time to load CSV data into data.frames: 0.20 minutes
 #+END_SRC
-
 * Introduction
 * Methodology
+* Preprocessing
+Grab the zip codes from the 'full address' data:
+** ZIP codes
+#+BEGIN_SRC R :session :exports none :results none
+  grab_zip <- function(address) {
+      as.numeric(substr(address,
+                        nchar(address, keepNA = TRUE) - 4,
+                        nchar(address, keepNA = TRUE)))
+  }
+
+  zips = lapply(business$full_address, grab_zip)
+
+  business <- mutate(business, zip_codes = zips)
+#+END_SRC
+How many ZIPs did we get? Dang, turns out that the about 1/8 of the addresses
+did not contain zipcodes we can grab.
+#+BEGIN_SRC R :session :exports none :results org
+percent_null_zips <- length(zips[is.na(zips)])/length(zips)*100
+
+sprintf("%.2f%% of restaurants have undecipherable zip codes", percent_null_zips)
+#+END_SRC
+
+#+RESULTS:
+
+#+RESULTS:
+#+BEGIN_SRC org
+12.95% of restaurants have undecipherable zip codes
+#+END_SRC
+
+#+BEGIN_SRC org
+12.95% of restaurants have undecipherable zip codes
+#+END_SRC
+Luckily yelp maintains longitude/latitude coordinates of each business for
+google maps integration, which we can affirm with the following query:
+#+BEGIN_SRC R :session :exports both :results org
+   longs <- grep('[[:digit:]]+.[[:digit:]]*', business$longitude)
+   lats <- grep('[[:digit:]]+.[[:digit:]]*', business$latitude)
+   stopifnot(length(longs) == length(lats),
+             length(longs) == length(business$longitude))
+   print("Done.")
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC org
+Done.
+#+END_SRC
+However, reverse geocoding, the process of converting geographic coordinates to
+zip codes or the like, is expensive and time consuming. Instead, we can get away
+with just looking at the price range states for individual restaurants, which is
+much easier. It may be interesting to at some point put in the work to produce the 
+zip codes.
 * Reviews
 ** Basic stuff
 #+BEGIN_SRC R :session :exports results :results org
   sprintf("Average rating across all reviews: %.3f", mean(reviews$stars))
-  sprintf("Average")
 #+END_SRC
 
 #+RESULTS:
 #+BEGIN_SRC org
 Average rating across all reviews: 3.764
 #+END_SRC
+** Distribution of scores by pricing 
+
+#+BEGIN_SRC R :session :exports results :results output org
+  bus <- business[,c('price.range', 'stars.avg', 'business_id', 'review_count')]
+#+END_SRC
+
+#+BEGIN_SRC R :session :exports code :results table :colnames yes
+bus_reviews <- merge(na.omit(bus), reviews, by = 'business_id')
+
+aggregate(bus_reviews, by = list(bus_reviews$price.range), FUN = var)
+#+END_SRC
+
+#+RESULTS:
+| Group.1 | business_id | price.range |         stars.avg |     review_count |            funny | user_id | review_id | text |            stars | date |           useful | type |             cool |
+|---------+-------------+-------------+-------------------+------------------+------------------+---------+-----------+------+------------------+------+------------------+------+------------------|
+|       1 | nil         |           0 | 0.463258441034476 |  235421.92346736 | 2.67151206671052 | nil     | nil       | nil  | 1.82879388186546 | nil  | 4.87703026584903 | nil  | 3.42804007762653 |
+|       2 | nil         |           0 | 0.380642930442767 | 514004.680368259 | 2.20501974046566 | nil     | nil       | nil  | 1.83059593489965 | nil  | 4.56060699894315 | nil  | 2.86369400473146 |
+|       3 | nil         |           0 | 0.288310041904166 | 1515791.81427968 | 4.29079548888191 | nil     | nil       | nil  | 1.78597137617491 | nil  | 7.40047851638096 | nil  | 4.89343544641167 |
+|       4 | nil         |           0 | 0.317305835634603 | 352039.141033968 | 3.74590926121521 | nil     | nil       | nil  | 1.76518852105585 | nil  | 7.79307534473968 | nil  | 4.98901172806675 |
+
+#+BEGIN_SRC R :session :exports both :results org 
+# review counts for businesses with and without listed price range
+mean_no_pr_rev_count <- mean(bus[is.na(bus$price.range)]$review_count)
+mean_pr_rev_count <- mean(bus[!is.na(bus$price.range)]$review_count)
+#+END_SRC
+** 
