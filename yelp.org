@@ -6,10 +6,13 @@ Necessary libraries
   library(dplyr)
   library(ascii)
   options(asciiType = "org")
+  options(max.print = 200)
 #+END_SRC
 
-Load up data and keep track of time. Time to go get a coffee...
-#+BEGIN_SRC R :session :exports none :cache no
+Load up about 2.3 gigabytes of tabular data and keep track of read
+time. Thankfully ~fread~ from the the ~data.table~ package makes this process a
+couple orders of magnitude faster than R Base's ~read.csv~:
+#+BEGIN_SRC R :session :exports none :cache yes
   read_table <- function(filename) {                                          
       table <- fread(filename)  # use fread to quickly read csv file
       # Make sure there aren't any unacceptable chracters in the column names
@@ -43,12 +46,15 @@ Load up data and keep track of time. Time to go get a coffee...
 
 #+RESULTS:
 #+BEGIN_SRC org
-Time to load CSV data into data.frames: 0.19 minutes
+Time to load CSV data into data.frames: 0.75 minutes
 #+END_SRC
 * Introduction
 * Methodology
 * Preprocessing
-Grab the zip codes from the 'full address' data:
+Zip code info for each business would be quite helpful for doing some looking
+into demographical patronage trends. However, ZIP code info is not explicitly
+required of businesses when registering with Yelp, so we have to see how easily
+they can be extracted from from the 'full address' data:
 ** ZIP codes
 #+BEGIN_SRC R :session :exports none :results none
   grab_zip <- function(address) {
@@ -62,7 +68,7 @@ Grab the zip codes from the 'full address' data:
   business <- mutate(business, zip_codes = zips)
 #+END_SRC
 How many ZIPs did we get? Dang, turns out that the about 1/8 of the addresses
-did not contain zipcodes we can grab.
+did not contain zipcodes easily grabbed.
 #+BEGIN_SRC R :session :exports none :results org
 percent_null_zips <- length(zips[is.na(zips)])/length(zips)*100
 
@@ -74,21 +80,16 @@ sprintf("%.2f%% of restaurants have undecipherable zip codes", percent_null_zips
 12.95% of restaurants have undecipherable zip codes
 #+END_SRC
 
-#+RESULTS:
-#+BEGIN_SRC org
-12.95% of restaurants have undecipherable zip codes
-#+END_SRC
-
-#+BEGIN_SRC org
-12.95% of restaurants have undecipherable zip codes
-#+END_SRC
-Luckily yelp maintains longitude/latitude coordinates of each business for
-google maps integration, which we can affirm with the following query:
+Upon closer inspection, it is apparent that generally businesses do not provide
+very good address information, and in fact, many do not provide any at
+all. Luckily Yelp maintains longitude/latitude coordinates of each business for
+the purpose of Google maps integration, which we can confidently affirm with the
+following assertion:
 #+BEGIN_SRC R :session :exports both :results org
    longs <- grep('[[:digit:]]+.[[:digit:]]*', business$longitude)
    lats <- grep('[[:digit:]]+.[[:digit:]]*', business$latitude)
    stopifnot(length(longs) == length(lats),
-             length(longs) == length(business$longitude))
+             length(longs) == length(business$latitude))
    print("Done.")
 #+END_SRC
 
@@ -96,55 +97,145 @@ google maps integration, which we can affirm with the following query:
 #+BEGIN_SRC org
 Done.
 #+END_SRC
-However, reverse geocoding, the process of converting geographic coordinates to
-zip codes or the like, is expensive and time consuming. Instead, we can get away
-with just looking at the price range states for individual restaurants, which is
-much easier. It may be interesting to at some point put in the work to produce the 
-zip codes.
-* Reviews
-** Basic stuff
-#+BEGIN_SRC R :session :exports results :results org
-  sprintf("Average rating across all reviews: %.3f", mean(reviews$stars))
-#+END_SRC
+
+While geographical coordinates are readily at hand, reverse geocoding, the
+process of converting geographic coordinates to zip codes or the like, is
+expensive and time consuming to do accurately. Instead, we can get away with
+just looking at the price range states for individual restaurants, which is much
+easier. It may be interesting to at some point put in the work/money to produce
+the zip code information.
+* Distribution
+** Rating variance
+ #+BEGIN_SRC R :session :exports code :results none :cache yes
+   star_variance <- merge(aggregate(stars ~ business_id,
+                                    data = reviews, 
+                                    FUN = var),
+                          na.omit(business[,c('price.range',
+                                              'stars.avg',
+                                              'business_id',
+                                              'review_count')]),
+                          by = 'business_id')
+   rename(star_variance, stars.var = stars)
+ #+END_SRC
+*** rating variance ~ price range
+   Because deriving demographics from geographical coordinates is a bit
+   difficult, it might be useful to get an idea of the quality of the rating
+   inconsistency by instead using restaurant price range, and not restaurant
+   neighborhood median income (or the like), as a feauture of interest. We can
+   aggregate the businesses by price range and average out their rating variance
+   to get an idea about this:
+
+   #+BEGIN_SRC R :session :exports both :results output org 
+     aggregate(stars ~ price.range, data = star_variance, FUN = mean)
+   #+END_SRC
+
+   #+RESULTS:
+   #+BEGIN_SRC org
+     price.range    stars
+   1           1 1.583441
+   2           2 1.555863
+   3           3 1.675943
+   4           4 1.912721
+   #+END_SRC
+   It seems that the correlation between rating inconsistency and restaurant
+   expensiveness is minimal. Maybe instead of price range, we can look at
+   rating average:
+
+   #+NAME: variance_vs_rating
+   #+BEGIN_SRC R :session :exports code :results org
+     cor(star_variance$stars, star_variance$stars.avg, use = 'complete')
+   #+END_SRC
+
+   #+RESULTS: variance_vs_rating
+   #+BEGIN_SRC org
+   -0.434429137743381
+   #+END_SRC
+
+   #+BEGIN_SRC R :session :exports results :results org :var x=variance_vs_rating
+     sprintf("Correlation between rating variance and rating average: %.2f", 
+             as.numeric(x))
+   #+END_SRC
+
+   #+RESULTS:
+   #+BEGIN_SRC org
+   Correlation between rating variance and rating average: -0.43
+   #+END_SRC
+   
+*** rating variance ~ rating average
+   So, the ratings variance for restaurants correlates negatively with their
+   average ratings. That is, poorly rated restaurants tend to also have more
+   varied ratings. A possible conclusion is that restaurant ratings are simply
+   skewed positively, and therefore deviation from mean rating is more often
+   bounded at 5 stars than at 1 star (4 star restaurants will get occaisional
+   2-star ratings, but of course never a 6-star rating). This can be
+   investigated with the following code:
+
+   #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_CCa0S6lS.png 
+     g <- ggplot(data=business, aes(business$stars))
+     g + geom_histogram(breaks=seq(1,5,by=.5),
+                        fill="red",
+                        col="red",
+                        alpha=.2) + 
+         labs(title = "Distribution average business rating", 
+              x = "Mean Rating",
+              y = "Count")
+   #+END_SRC
 
 #+RESULTS:
-#+BEGIN_SRC org
-Average rating across all reviews: 3.764
-#+END_SRC
+[[file:./img/R_CCa0S6lS.png]]
+
+
+    
+  So the suspicion turns out to be correct, and not very surprisingly. I think
+  that most people who have used the internet, and therefore have some
+  familiarity with online rating systems like yelp, probably have an intuitive
+  idea about the tendency for these systems to have a strong positive skew. I
+  suspect a major reason for this is social pressure, a factor that is
+  particularly present on a facebook-based website like Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is not a
+  unique idea]]), for which the median rating is
+  src_R[:session]{median(business$stars.avg)} {{{results(=4=)}}}.
+
+*** rating average ~ price range                                     :ignore:
+    In any case, we might still wonder why there exists this correlation between
+    rating inconsistency and average rating, yet also no such correlation
+    whatsoever between rating inconsistency and restaurant expensiveness,
+    statements which we might expect, possibly naively, to be very similar
+    (i.e., more expensive restaurants are generally rated more highly). The
+    reason for this lack of correlation is because this is indeed a naive
+    assumption:
+*** Basic stuff
+ #+BEGIN_SRC R :session :exports results :results org
+   sprintf("Average rating across all reviews: %.3f", mean(reviews$stars))
+ #+END_SRC
+
+ #+RESULTS:
+ #+BEGIN_SRC org
+ Average rating across all reviews: 3.764
+ #+END_SRC
+
 ** Distribution of scores by pricing 
 
 #+BEGIN_SRC R :session :exports results :results none
   bus <- business[,c('price.range', 'stars.avg', 'business_id', 'review_count')]
 #+END_SRC
 
-#+BEGIN_SRC R :session :exports code :results none :cache no
+#+BEGIN_SRC R :session :exports code :results none :cache yes
   bus_reviews <- merge(na.omit(bus), reviews, by = 'business_id')
 #+END_SRC
 
-#+BEGIN_SRC R :session :exports code :results org :cache no
+#+BEGIN_SRC R :session :exports code :results org :cache yes
   print(ascii(aggregate(bus_reviews, 
                         by = list(bus_reviews$price.range),
                         FUN = var)))
 #+END_SRC
 
 #+RESULTS[df58e5b91980b445999fd6612031ba52aeea7157]:
-#+BEGIN_SRC org
-#+END_SRC
 
-#+BEGIN_SRC R :session :exports code :results output org 
-  star_variance <- merge(aggregate(stars ~ business_id,
-                                   data = reviews, FUN = var),
-                         na.omit(bus),
-                         by = 'business_id')
-#+END_SRC
-
-#+RESULTS:
 #+BEGIN_SRC org
-#+END_SRC
+#+END_SRC 
 
 #+BEGIN_SRC R :session :exports both :results none
 # review counts for businesses with and without listed price range
 mean_no_pr_rev_count <- mean(bus[is.na(bus$price.range)]$review_count)
 mean_pr_rev_count <- mean(bus[!is.na(bus$price.range)]$review_count)
 #+END_SRC
-** 
