@@ -1,3 +1,10 @@
+#+HTML_HEAD: <link href="/home/dodge/.emacs.d/leuven-theme.css" rel="stylesheet">
+#+TITLE: *@@html:<font color = "C2492F">@@Sensibility of Yelp Rating Trends@@html:</font>@@*
+
+#+OPTIONS: toc:2 num:nil
+#+TABLFM: $0;%0.3f
+
+
 * Init
 Necessary libraries
 #+BEGIN_SRC R :session :exports none :results none
@@ -15,7 +22,7 @@ couple orders of magnitude faster than R Base's ~read.csv~:
 #+BEGIN_SRC R :session :exports none :cache yes
   read_table <- function(filename) {                                          
       table <- fread(filename)  # use fread to quickly read csv file
-      # Make sure there aren't any unacceptable chracters in the column names
+      # Make sure there ren't any unacceptable chracters in the column names
       names(table) <- make.names(tolower(names(table)), unique = TRUE)
       table
   }
@@ -170,8 +177,8 @@ the zip code information.
    2-star ratings, but of course never a 6-star rating). This can be
    investigated with the following code:
 
-   #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_CCa0S6lS.png 
-     g <- ggplot(data=business, aes(business$stars))
+   #+BEGIN_SRC R :session :exports results :results graphics :file ./img/R_CCa0S6lS.png 
+     g <- ggplot(data=business, aes(business$stars.avg))
      g + geom_histogram(breaks=seq(1,5,by=.5),
                         fill="red",
                         col="red",
@@ -183,8 +190,6 @@ the zip code information.
 
 #+RESULTS:
 [[file:./img/R_CCa0S6lS.png]]
-
-
     
   So the suspicion turns out to be correct, and not very surprisingly. I think
   that most people who have used the internet, and therefore have some
@@ -193,7 +198,7 @@ the zip code information.
   suspect a major reason for this is social pressure, a factor that is
   particularly present on a facebook-based website like Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is not a
   unique idea]]), for which the median rating is
-  src_R[:session]{median(business$stars.avg)} {{{results(=4=)}}}.
+  src_R[:session]{mean(business$stars.avg)} {{{results(=3.69485221359472=)}}}.
 
 *** rating average ~ price range                                     :ignore:
     In any case, we might still wonder why there exists this correlation between
@@ -203,6 +208,15 @@ the zip code information.
     (i.e., more expensive restaurants are generally rated more highly). The
     reason for this lack of correlation is because this is indeed a naive
     assumption:
+
+#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_YzrIrkYy.png 
+  b <- business[is.na(business$price.range),]
+  ggplot(b, aes(x=stars.avg, fill=price.range)) + geom_histogram(binwidth=.5)
+#+END_SRC
+
+#+RESULTS:
+[[file:./img/R_YzrIrkYy.png]]
+
 *** Basic stuff
  #+BEGIN_SRC R :session :exports results :results org
    sprintf("Average rating across all reviews: %.3f", mean(reviews$stars))
@@ -230,9 +244,6 @@ the zip code information.
 #+END_SRC
 
 #+RESULTS[df58e5b91980b445999fd6612031ba52aeea7157]:
-
-#+BEGIN_SRC org
-#+END_SRC 
 
 #+BEGIN_SRC R :session :exports both :results none
 # review counts for businesses with and without listed price range
