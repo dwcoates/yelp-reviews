@@ -4,7 +4,6 @@
 #+OPTIONS: toc:2 num:nil
 #+TABLFM: $0;%0.3f
 
-
 * Init
 Necessary libraries
 #+BEGIN_SRC R :session :exports none :results none
@@ -55,6 +54,7 @@ couple orders of magnitude faster than R Base's ~read.csv~:
 #+BEGIN_SRC org
 Time to load CSV data into data.frames: 0.75 minutes
 #+END_SRC
+
 * Introduction
 * Methodology
 * Preprocessing
@@ -218,10 +218,8 @@ the zip code information.
 #+RESULTS:
 [[file:./img/R_JTmgqG9.png]]
 
-
-
+** Price distribution
 #+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_YzrIrkYy.png 
-
   b <- business[!is.na(business$price.range), ] # priced restaurants only
   b[, 'price.range'] <- factor(b$price.range, labels=c('low', 'mid-low', 
                                                        'mid-high', 'high'))
@@ -230,6 +228,15 @@ the zip code information.
 
 #+RESULTS:
 [[file:./img/R_YzrIrkYy.png]]
+
+Interestingly, this distribution is quite unique for non-priced restaurants:
+#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_vvM4L9Z2.png 
+  ggplot(business[is.na(business$price.range),], aes(x=stars.avg)) +
+      geom_histogram(binwidth=.5, color='orange', fill='orange')
+#+END_SRC
+
+#+RESULTS:
+[[file:./img/R_vvM4L9Z2.png]]
 
 *** Basic stuff
  #+BEGIN_SRC R :session :exports results :results org
