@@ -44,7 +44,7 @@ couple orders of magnitude faster than R Base's ~read.csv~:
   checkins_t = system.time(checkins <- read_table("./data/checkin.csv"))
 #+END_SRC
 
-#+RESULTS[27cd5d8ead7b3d93ec0d42a22a704adb38c13ac6]:
+#+RESULTS[0588b5778d45a9dcdecb72b4060cd20a3b1063b2]:
 
 #+BEGIN_SRC R :session :exports results :results org
   total_load_time <- reviews_t + tips_t + business_t + users_t + checkins_t
@@ -204,13 +204,16 @@ the zip code information.
     In any case, we might still wonder why there exists this correlation between
     rating inconsistency and average rating, yet also no such correlation
     whatsoever between rating inconsistency and restaurant expensiveness,
-    statements which we might expect, possibly naively, to be very similar
+    statements which we might expect possibly naively, to be very similar
     (i.e., more expensive restaurants are generally rated more highly). The
     reason for this lack of correlation is because this is indeed a naive
     assumption:
 
 #+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_YzrIrkYy.png 
-  b <- business[is.na(business$price.range),]
+
+  b <- business[!is.na(business$price.range), ] # priced restaurants only
+  b[, 'price.range'] <- factor(b$price.range, labels=c('low', 'mid-low', 
+                                                       'mid-high', 'high'))
   ggplot(b, aes(x=stars.avg, fill=price.range)) + geom_histogram(binwidth=.5)
 #+END_SRC
 
