@@ -204,10 +204,21 @@ the zip code information.
     In any case, we might still wonder why there exists this correlation between
     rating inconsistency and average rating, yet also no such correlation
     whatsoever between rating inconsistency and restaurant expensiveness,
-    statements which we might expect possibly naively, to be very similar
+    statements which we might expect, possibly naively, to be very similar
     (i.e., more expensive restaurants are generally rated more highly). The
     reason for this lack of correlation is because this is indeed a naive
     assumption:
+
+#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_JTmgqG9.png 
+  b <- aggregate(business, by=list(business$price.range), FUN=mean)[c('price.range', 'stars.avg')]
+  ggplot(b, aes(x=price.range, y=stars.avg)) + 
+      geom_bar(stat='identity', color='black', fill='yellow', alpha=.2)
+#+END_SRC
+
+#+RESULTS:
+[[file:./img/R_JTmgqG9.png]]
+
+
 
 #+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_YzrIrkYy.png 
 
