@@ -45,6 +45,7 @@ couple orders of magnitude faster than R Base's ~read.csv~:
 
 #+RESULTS[0588b5778d45a9dcdecb72b4060cd20a3b1063b2]:
 
+
 #+BEGIN_SRC R :session :exports results :results org
   total_load_time <- reviews_t + tips_t + business_t + users_t + checkins_t
   sprintf("Time to load CSV data into data.frames: %.2f minutes", total_load_time["elapsed"]/60.0)
@@ -52,7 +53,7 @@ couple orders of magnitude faster than R Base's ~read.csv~:
 
 #+RESULTS:
 #+BEGIN_SRC org
-Time to load CSV data into data.frames: 0.75 minutes
+Time to load CSV data into data.frames: 0.74 minutes
 #+END_SRC
 
 * Introduction
@@ -122,7 +123,7 @@ the zip code information.
                                               'business_id',
                                               'review_count')]),
                           by = 'business_id')
-   rename(star_variance, stars.var = stars)
+   star_variance <- rename(star_variance, stars.var = stars)
  #+END_SRC
 *** rating variance ~ price range
    Because deriving demographics from geographical coordinates is a bit
@@ -132,25 +133,26 @@ the zip code information.
    aggregate the businesses by price range and average out their rating variance
    to get an idea about this:
 
-   #+BEGIN_SRC R :session :exports both :results output org 
-     aggregate(stars ~ price.range, data = star_variance, FUN = mean)
+   #+NAME: stars_pr
+   #+BEGIN_SRC R :session :exports code :colnames yes 
+     aggregate(stars.var ~ price.range, data = star_variance, FUN = mean)
    #+END_SRC
 
-   #+RESULTS:
-   #+BEGIN_SRC org
-     price.range    stars
-   1           1 1.583441
-   2           2 1.555863
-   3           3 1.675943
-   4           4 1.912721
-   #+END_SRC
+   #+RESULTS: stars_pr
+   | price.range |        stars.var |
+   |-------------+------------------|
+   |           1 |  1.5834411360414 |
+   |           2 | 1.55586274965935 |
+   |           3 | 1.67594320395976 |
+   |           4 | 1.91272081281026 |
+
    It seems that the correlation between rating inconsistency and restaurant
-   expensiveness is minimal. Maybe instead of price range, we can look at
+   expensiveness is very small. Maybe instead of price range, we can look at
    rating average:
 
    #+NAME: variance_vs_rating
    #+BEGIN_SRC R :session :exports code :results org
-     cor(star_variance$stars, star_variance$stars.avg, use = 'complete')
+     cor(star_variance$stars.var, star_variance$stars.avg, use='complete')
    #+END_SRC
 
    #+RESULTS: variance_vs_rating
@@ -165,16 +167,16 @@ the zip code information.
 
    #+RESULTS:
    #+BEGIN_SRC org
-   Correlation between rating variance and rating average: -0.43
+     Correlation between rating variance and rating average: -0.43
    #+END_SRC
    
 *** rating variance ~ rating average
-   So, the ratings variance for restaurants correlates negatively with their
-   average ratings. That is, poorly rated restaurants tend to also have more
-   varied ratings. A possible conclusion is that restaurant ratings are simply
-   skewed positively, and therefore deviation from mean rating is more often
-   bounded at 5 stars than at 1 star (4 star restaurants will get occaisional
-   2-star ratings, but of course never a 6-star rating). This can be
+   So, we see that the rating variance for restaurants correlates negatively
+   with their average ratings. That is, poorly rated restaurants tend to also
+   have more varied ratings. A possible conclusion is that restaurant ratings
+   are simply skewed positively, and therefore deviation from mean rating is
+   more often bounded at 5 stars than at 1 star (4 star restaurants will get
+   occaisional 2-star ratings, but of course never a 6-star rating). This can be
    investigated with the following code:
 
    #+BEGIN_SRC R :session :exports results :results graphics :file ./img/R_CCa0S6lS.png 
@@ -193,12 +195,13 @@ the zip code information.
     
   So the suspicion turns out to be correct, and not very surprisingly. I think
   that most people who have used the internet, and therefore have some
-  familiarity with online rating systems like yelp, probably have an intuitive
+  familiarity with online rating systems like Yelp, probably have an intuitive
   idea about the tendency for these systems to have a strong positive skew. I
   suspect a major reason for this is social pressure, a factor that is
-  particularly present on a facebook-based website like Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is not a
-  unique idea]]), for which the median rating is
-  src_R[:session]{mean(business$stars.avg)} {{{results(=3.69485221359472=)}}}.
+  particularly present on a Facebook-based website like Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is not a
+  unique idea]]), for which the median rating is a rather high
+  src_R[:session]{sprintf("%.2f", mean(business$stars.avg))}
+  {{{results(=3.69485221359472=)}}}.
 
 *** rating average ~ price range                                     :ignore:
     In any case, we might still wonder why there exists this correlation between
@@ -238,6 +241,13 @@ Interestingly, this distribution is quite unique for non-priced restaurants:
 #+RESULTS:
 [[file:./img/R_vvM4L9Z2.png]]
 
+#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_3EqwcmXp.png 
+ggplot(star_variance, aes(x=stars)) + geom_histogram(color='red', fill='red')
+#+END_SRC
+
+#+RESULTS:
+[[file:./img/R_3EqwcmXp.png]]
+
 *** Basic stuff
  #+BEGIN_SRC R :session :exports results :results org
    sprintf("Average rating across all reviews: %.3f", mean(reviews$stars))
@@ -265,6 +275,9 @@ Interestingly, this distribution is quite unique for non-priced restaurants:
 #+END_SRC
 
 #+RESULTS[df58e5b91980b445999fd6612031ba52aeea7157]:
+#+BEGIN_SRC org
+#+END_SRC
+
 
 #+BEGIN_SRC R :session :exports both :results none
 # review counts for businesses with and without listed price range
