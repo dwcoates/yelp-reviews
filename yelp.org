@@ -269,34 +269,58 @@ not particularly surprising:
 #+RESULTS:
 [[file:./img/R_YzrIrkYy.png]]
 
-Interestingly, it seems that unpriced restaurants, i.e., restaurants for which a
-price range has not been assigned via user concensus, are, however, not only
+Interestingly, it seems that unpriced restaurants, i.e. restaurants for which a
+price range has not yet been assigned via user concensus, are, however, not only
 considerably more positively rated, but also in a seemingly linear fashion:
 #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_vvM4L9Z2.png 
   b <- business[business$review_count > 20, ]
   ggplot(b[is.na(b$price.range),], aes(x=stars.avg)) +
-      geom_histogram(binwidth=.10, color='orange', fill='orange')
+      geom_histogram(binwidth=.10, color='orange', fill='orange') +
+      ylab('Count') +
+      xlab('Rating average (mean)') +
+      labs(fill="Price Range") +
+      ggtitle('Distribution of ratings for unpriced businesses by price range')
 #+END_SRC
 
 #+RESULTS:
 [[file:./img/R_vvM4L9Z2.png]]
 
-This begs the question, is there a downward tendency for restaurant ratings as
-the profiles for these restaurants mature? The fact that unrated restaurants
-tend to be less those with less mature profiles is glaringly suspicious.
+We can see clearly that there is a much more siginificant positive skew for
+these unrated restaurants. This begs the question, is there a downward tendency
+for restaurant ratings as their profiles mature? The fact that unrated
+restaurants tend to be less those with less mature profiles is glaringly
+suspicious.
 #+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_3EqwcmXp.png 
-ggplot(star_variance, aes(x=stars)) + geom_histogram(color='red', fill='red')
+s <- star_variance[star_variance$review_count > 20, ]
+ggplot(s, aes(x=stars.var)) + geom_histogram(color='red', fill='red', binwidth=.1)
 #+END_SRC
 
 #+RESULTS:
 [[file:./img/R_3EqwcmXp.png]]
+
+#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_5QvlYFse.png 
+  s <- star_variance[star_variance$review_count > 100, ]
+  ggplot(s, aes(x=stars.var, y=stars.avg)) + geom_point()
+#+END_SRC
+
+#+RESULTS:
+[[file:./img/R_5QvlYFse.png]]
+
+
+#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_wGL1DyI7.png 
+  s <- star_variance[star_variance$review_count > 100, ]
+  ggplot(s, aes(x=stars.var, y=review_count)) + geom_point()
+#+END_SRC
+
+#+RESULTS:
+[[file:./img/R_wGL1DyI7.png]]
 
 *** Basic stuff
  #+BEGIN_SRC R :session :exports results :results org
    sprintf("Average rating across all reviews: %.3f", mean(reviews$stars))
  #+END_SRC
 
- #+RESULTS:
+ #+RESULTS: 
  #+BEGIN_SRC org
  Average rating across all reviews: 3.764
  #+END_SRC
@@ -324,4 +348,4 @@ We can see the law of large numbers in action
 #+END_SRC
 
 #+RESULTS:
-[[file:./img/R_8bbjovom.png]]
+[[file:./img/R_8bbjovom.png]]P
