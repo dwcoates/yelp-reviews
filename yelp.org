@@ -3,6 +3,27 @@
 
 #+OPTIONS: toc:2 num:nil
 
+* Introduction
+The ubiquity of user review services is a modern phenomenon, being perhaps one
+of the most obvious and profoundly popular uses of the internet. Do you need to
+know the general opinion about something? Google it. Google an interesting pair
+of headphones to read its Amazon reviews, google the new Marvel movie to get
+movie-goer reviews from IMDb, google the neighborhood restaurant to peruse its
+Yelp reviews. Yelp reviewership is the subject of this blog post, and in
+particular, a look at how reviewers tend to disbalance their rating
+standards. This endeavor begins by taking a look at rating consistency by
+context; the entry point being an investigation into the suspicion that
+restaurants in less affluent neighborhoods tend to have higher rating variance
+than those in more affluent neighborhoods.
+* Methodology
+This analysis uses the Yelp academic dataset, which consists of about 2.6
+million user reviews, plus some relevant category data (~85k businesses, ~700k
+users, etc). This data is stored natively in json, though the data is quite
+flat, even more so one discounts some of the less useful bits of
+information. Therefore the json was trimmed and converted to a csv format via a
+python script, and the resulting csv files, uncompressed, total ~2 gigabytes on
+disk. R is the language of choice for the analysis, with the data.table often
+coming in handy for its speed.
 * Initializing data 
 Data has been preprocessed by a small Python script that flattens the source
 json into csv and trims off useless data.
@@ -56,8 +77,6 @@ order of magnitude or two faster than R Base's ~read.csv~:
 Time to load CSV data into data.frames: 0.20 minutes
 #+END_SRC
 
-* Introduction
-* Methodology
 * Preprocessing
 Zip code info for each business would be quite helpful for doing some looking
 into demographical patronage trends. However, ZIP code info is not explicitly
@@ -313,7 +332,7 @@ ggplot(s, aes(x=stars.var)) + geom_histogram(color='red', fill='red', binwidth=.
 #+END_SRC
 
 #+RESULTS:
-[[file:./img/R_wGL1DyI7.png]]
+[[file:./img/R_wGL1DyI7.png]] <
 
 *** Basic stuff
  #+BEGIN_SRC R :session :exports results :results org
