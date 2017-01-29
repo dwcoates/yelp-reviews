@@ -20,7 +20,7 @@ Necessary libraries
 Need to load up about 2.3 gigabytes of tabular data and keep track of read
 time. Thankfully ~fread~ from the the ~data.table~ package makes this process an
 order of magnitude or two faster than R Base's ~read.csv~:
-#+BEGIN_SRC R :session :exports none :cache yes
+#+BEGIN_SRC R :session :exports none :cache 
   read_table <- function(filename) {                                          
       table <- fread(filename)  # use fread to quickly read csv file
       # Make sure there ren't any unacceptable chracters in the column names
@@ -128,7 +128,7 @@ the zip code information.
 #+END_SRC
 * Distribution
 ** Rating variance
- #+BEGIN_SRC R :session :exports code :results none :cache yes
+ #+BEGIN_SRC R :session :exports code :results none :cache no
    star_variance <- merge(aggregate(stars ~ business_id,
                                     data = reviews, 
                                     FUN = var),
@@ -191,8 +191,9 @@ the zip code information.
    ratings are simply skewed positively, and therefore deviation from mean
    rating is more often bounded at 5 stars than at 1 star (4 star restaurants
    will get occaisional 2-star ratings, but of course never a 6-star rating). We
-   can investigate this idea with the following histographic depicting of
-   the mean restaurant rating distribution:
+   can investigate this idea with the following histographic depicting of the
+   mean restaurant rating distribution. Note that we limit ourselves to those
+   businesses with at least 20 reviews:
 
    #+BEGIN_SRC R :session :exports results :results graphics :file ./img/R_CCa0S6lS.png 
      b <- filter(business, review_count > 20)
@@ -210,21 +211,20 @@ the zip code information.
 [[file:./img/R_CCa0S6lS.png]]
     
   Above we see that the average restaurant rating shows significant positive
-  skew, and therefore the first hypothesis seems a bit more be believable. most
+  skew, and therefore the first hypothesis seems a bit more be believable. Most
   people who have experience with the internet, and therefore have some
   familiarity with online rating systems like Yelp, probably have an intuitive
   idea about this tendency for these ratings systems to have a very strong
-  positive skew. I suspect a major reason for this is social pressure, a factor
-  that is particularly present on a Facebook-based website like Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is
-  not a unique idea]]). For reference, the mean restaurant rating is a rather high
-  src_R[:session]{sprintf("%.2f", mean(business$stars.avg))}
-  {{{results(=3.69=)}}} stars.
+  positive skew. I suspect a major reason for this is perceived social pressure,
+  particularly in the case of a Facebook-driven website such as Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is
+  not a unique idea]]). For reference, the mean business rating is a rather high
+  src_R[:session]{sprintf("%.2f", mean(business$stars.avg))} {{{results(=3.69=)}}} stars.
 
 *** stars.avg ~ price.range                                          :ignore:
     In any case, we might still wonder why there exists this correlation between
     rating inconsistency and average rating, yet also no such correlation
     whatsoever between rating inconsistency and restaurant expensiveness,
-    statements which we might expect, possibly naively, to be very similar
+    statements which we might expect, possibly naively, to be quite similar
     (i.e., more expensive restaurants are generally rated more highly). The
     reason for this lack of correlation is because this is indeed a naive
     assumption:
@@ -242,31 +242,48 @@ the zip code information.
 #+RESULTS:
 [[file:./img/R_JTmgqG9.png]]
 
+I suspect an explanation for this indescrepency is simply that the value to
+which these ratings refer is not very well in line with what we, as consumers,
+intuitively and automatically summarize them to mean. So, while as a consumer we
+think of these ratings, without much actual precise consideration, as a general
+measure of "goodness", with zero being un-good and five being very good, of
+course. However, how do we think of these ratings when we actually contribute
+them? Indeed, it might be more accurate to describe my own system as how little
+my satisfaction with the restaurant deviated from what I had expected. In this way,
+I've normalized my perspective on the restaurant, but without actually yielding
+me any bang-for-the-buck measure. I consider this a bad and unhelpful way to contribute
+my opinion on the business, but this is the way that I feel I am most naturally inclined. 
 ** Price distribution
 The pricing makeup of our positively skewed restaurant rating distribution is
 not particularly surprising:
 #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_YzrIrkYy.png 
   # priced restaurants only
   ggplot(business[!is.na(business$price.range), ],
-         aes(x=stars.avg, fill=price.range)) + geom_histogram(binwidth=.5)
+         aes(x=stars.avg, fill=price.range)) + geom_histogram(binwidth=.25) +
+         ylab('Count') +
+         xlab('Rating average (mean)') +
+         labs(fill="Price Range") +
+         ggtitle('Distribution of ratings by business price range')
 #+END_SRC
 
 #+RESULTS:
 [[file:./img/R_YzrIrkYy.png]]
 
 Interestingly, it seems that unpriced restaurants, i.e., restaurants for which a
-price range has not been assigned via user concensus, are, however, considerably more
-positively rated:
+price range has not been assigned via user concensus, are, however, not only
+considerably more positively rated, but also in a seemingly linear fashion:
 #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_vvM4L9Z2.png 
-  ggplot(business[is.na(business$price.range),], aes(x=stars.avg)) +
-      geom_histogram(binwidth=.5, color='orange', fill='orange')
+  b <- business[business$review_count > 20, ]
+  ggplot(b[is.na(b$price.range),], aes(x=stars.avg)) +
+      geom_histogram(binwidth=.10, color='orange', fill='orange')
 #+END_SRC
 
 #+RESULTS:
 [[file:./img/R_vvM4L9Z2.png]]
 
 This begs the question, is there a downward tendency for restaurant ratings as
-the profiles for these restaurants mature?
+the profiles for these restaurants mature? The fact that unrated restaurants
+tend to be less those with less mature profiles is glaringly suspicious.
 #+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_3EqwcmXp.png 
 ggplot(star_variance, aes(x=stars)) + geom_histogram(color='red', fill='red')
 #+END_SRC
@@ -284,32 +301,6 @@ ggplot(star_variance, aes(x=stars)) + geom_histogram(color='red', fill='red')
  Average rating across all reviews: 3.764
  #+END_SRC
 
-** Distribution of scores by pricing 
-
-#+BEGIN_SRC R :session :exports results :results none
-  bus <- business[,c('price.range', 'stars.avg', 'business_id', 'review_count')]
-#+END_SRC
-
-#+BEGIN_SRC R :session :exports code :results none :cache yes
-  bus_reviews <- merge(na.omit(bus), reviews, by = 'business_id')
-#+END_SRC
-
-#+BEGIN_SRC R :session :exports code :results org :cache yes
-  print(ascii(aggregate(bus_reviews, 
-                        by = list(bus_reviews$price.range),
-                        FUN = var)))
-#+END_SRC
-
-#+RESULTS[df58e5b91980b445999fd6612031ba52aeea7157]:
-#+BEGIN_SRC org
-#+END_SRC
-
-
-#+BEGIN_SRC R :session :exports both :results none
-# review counts for businesses with and without listed price range
-mean_no_pr_rev_count <- mean(bus[is.na(bus$price.range)]$review_count)
-mean_pr_rev_count <- mean(bus[!is.na(bus$price.range)]$review_count)
-#+END_SRC
 * BIN
 We can see the law of large numbers in action
 #+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_vQgMpNec.png 
