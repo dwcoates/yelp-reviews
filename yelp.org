@@ -41,7 +41,7 @@ Necessary libraries
 Need to load up about 2.3 gigabytes of tabular data and keep track of read
 time. Thankfully ~fread~ from the the ~data.table~ package makes this process an
 order of magnitude or two faster than R Base's ~read.csv~:
-#+BEGIN_SRC R :session :exports none :cache 
+#+BEGIN_SRC R :session :exports none :cache no
   read_table <- function(filename) {                                          
       table <- fread(filename)  # use fread to quickly read csv file
       # Make sure there ren't any unacceptable chracters in the column names
@@ -74,14 +74,14 @@ order of magnitude or two faster than R Base's ~read.csv~:
 
 #+RESULTS:
 #+BEGIN_SRC org
-Time to load CSV data into data.frames: 0.20 minutes
+Time to load CSV data into data.frames: 0.52 minutes
 #+END_SRC
 
 * Preprocessing
-Zip code info for each business would be quite helpful for doing some looking
-into demographical patronage trends. However, ZIP code info is not explicitly
+Zip code info for each business would be quite helpful for looking into the
+demographical review trends. However, ZIP code info is not explicitly
 required of businesses when registering with Yelp, so we have to see how easily
-they can be extracted from from the 'full address' data:
+they can be extracted from from the 'full address' data for each business.
 ** ZIP codes
 #+BEGIN_SRC R :session :exports none :results none
   grab_zip <- function(address) {
@@ -95,7 +95,7 @@ they can be extracted from from the 'full address' data:
   business <- mutate(business, zip_codes = zips)
 #+END_SRC
 How many ZIPs did we get? Dang, turns out that the about 1/8 of the addresses
-did not contain zipcodes easily grabbed.
+did not contain any zip codes that could be retreived.
 #+BEGIN_SRC R :session :exports none :results org
 percent_null_zips <- length(zips[is.na(zips)])/length(zips)*100
 
@@ -104,10 +104,10 @@ sprintf("%.2f%% of restaurants have undecipherable zip codes", percent_null_zips
 
 #+RESULTS:
 #+BEGIN_SRC org
-12.61% of restaurants have undecipherable zip codes
+12.95% of restaurants have undecipherable zip codes
 #+END_SRC
 
-Upon closer inspection, it is apparent that generally businesses do not provide
+Upon closer inspection, it turns out that generally businesses do not provide
 very good address information, and in fact, many do not provide any at
 all. Luckily Yelp maintains longitude/latitude coordinates of each business for
 the purpose of Google maps integration, which we can confidently affirm with the
@@ -124,13 +124,13 @@ following assertion:
 #+BEGIN_SRC org
 Done.
 #+END_SRC
-
-While geographical coordinates are readily at hand, reverse geocoding, the
-process of converting geographic coordinates to zip codes or the like, is
-expensive and time consuming to do accurately. Instead, we can get away with
-just looking at the price range states for individual restaurants, which is much
-easier. It may be interesting to at some point put in the work/money to produce
-the zip code information.
+While geographical coordinates are readily at hand, it turns out that reverse
+geocoding, the process of converting geographic coordinates to zip codes or the
+like, costs money and is time consuming to do accurately. Instead, it could be
+useful to get an idea of the quality of the rating inconsistency by instead
+using restaurant price range, and not restaurant neighborhood median income (or
+the like), as a feauture of interest.  It may be fun to at some point put in the
+work/money to produce the zip code information.
 ** Additional categories and misc data cleaning :ignore:
 #+BEGIN_SRC R :session :exports none :results  none
   business <- merge(business, 
@@ -146,8 +146,8 @@ the zip code information.
                                                                 'High'))
 #+END_SRC
 * Distribution
-** Rating variance
- #+BEGIN_SRC R :session :exports code :results none :cache no
+** Inconsistency of ratings
+ #+BEGIN_SRC R :session :exports code :results none :cache yes
    star_variance <- merge(aggregate(stars ~ business_id,
                                     data = reviews, 
                                     FUN = var),
@@ -159,19 +159,15 @@ the zip code information.
    star_variance <- rename(star_variance, stars.var = stars)
  #+END_SRC
 *** stars.var ~ price.range
-   Because deriving demographics from geographical coordinates is a bit
-   difficult, it might be useful to get an idea of the quality of the rating
-   inconsistency by instead using restaurant price range, and not restaurant
-   neighborhood median income (or the like), as a feauture of interest. We can
-   aggregate the businesses by price range and average out their rating variance
-   to get an idea about this:
-
-   #+NAME: stars_pr
-   #+BEGIN_SRC R :session :exports code :colnames yes 
+   We can aggregate the businesses by price range and average out their rating
+   variance to get an idea about how restaurant pricing correlates with reviewer
+   consistency:
+   #+NAME: star_var
+   #+BEGIN_SRC R :session :exports both :colnames yes
      aggregate(stars.var ~ price.range, data = star_variance, FUN = mean)
    #+END_SRC
 
-   #+RESULTS: stars_pr
+   #+RESULTS: star_var
    | price.range |        stars.var |
    |-------------+------------------|
    | Low         |  1.5834411360414 |
@@ -202,7 +198,25 @@ the zip code information.
    #+BEGIN_SRC org
    Correlation between rating variance and rating average: -0.45
    #+END_SRC
-   
+
+   So we've gotten a bit far at this point from the original idea of the effect
+   of neighborhood demographics on rating consistency, but this might still be
+   something worth exploring. We can see below a plot of average businesses
+   rating vs average rating variance:
+   #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_5QvlYFse.png 
+     s <- star_variance[star_variance$review_count > 100, ]
+     ggplot(s, aes(x=stars.var, y=stars.avg, color=price.range)) + 
+         geom_point() +
+         labs(color="Price Range",
+              x='Rating variance',
+              y='Rating average (mean)',
+              title="Correlation between mean business ratings and business rating variances")
+   #+END_SRC
+
+#+RESULTS:
+[[file:./img/R_5QvlYFse.png]]
+
+
 *** stars.var ~ stars.avg
    So, we see that the rating variance for restaurants correlates negatively
    with their average ratings. That is, poorly rated restaurants have a tendency
@@ -317,22 +331,13 @@ ggplot(s, aes(x=stars.var)) + geom_histogram(color='red', fill='red', binwidth=.
 #+RESULTS:
 [[file:./img/R_3EqwcmXp.png]]
 
-#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_5QvlYFse.png 
-  s <- star_variance[star_variance$review_count > 100, ]
-  ggplot(s, aes(x=stars.var, y=stars.avg)) + geom_point()
-#+END_SRC
-
-#+RESULTS:
-[[file:./img/R_5QvlYFse.png]]
-
-
 #+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_wGL1DyI7.png 
   s <- star_variance[star_variance$review_count > 100, ]
   ggplot(s, aes(x=stars.var, y=review_count)) + geom_point()
 #+END_SRC
 
 #+RESULTS:
-[[file:./img/R_wGL1DyI7.png]] <
+[[file:./img/R_wGL1DyI7.png]]
 
 *** Basic stuff
  #+BEGIN_SRC R :session :exports results :results org
@@ -367,4 +372,4 @@ We can see the law of large numbers in action
 #+END_SRC
 
 #+RESULTS:
-[[file:./img/R_8bbjovom.png]]P
+[[file:./img/R_8bbjovom.png]]
