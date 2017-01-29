@@ -2,9 +2,11 @@
 #+TITLE: *@@html:<font color = "C2492F">@@Sensibility of Yelp Rating Trends@@html:</font>@@*
 
 #+OPTIONS: toc:2 num:nil
-#+TABLFM: $0;%0.3f
 
-* Init
+* Initializing data 
+Data has been preprocessed by a small Python script that flattens the source
+json into csv and trims off useless data.
+** Libraries :noexport:
 Necessary libraries
 #+BEGIN_SRC R :session :exports none :results none
   library(ggplot2)
@@ -14,10 +16,10 @@ Necessary libraries
   options(asciiType = "org")
   options(max.print = 200)
 #+END_SRC
-
-Load up about 2.3 gigabytes of tabular data and keep track of read
-time. Thankfully ~fread~ from the the ~data.table~ package makes this process a
-couple orders of magnitude faster than R Base's ~read.csv~:
+** Data :ignore:
+Need to load up about 2.3 gigabytes of tabular data and keep track of read
+time. Thankfully ~fread~ from the the ~data.table~ package makes this process an
+order of magnitude or two faster than R Base's ~read.csv~:
 #+BEGIN_SRC R :session :exports none :cache yes
   read_table <- function(filename) {                                          
       table <- fread(filename)  # use fread to quickly read csv file
@@ -34,7 +36,6 @@ couple orders of magnitude faster than R Base's ~read.csv~:
 
   print("Loading business...")
   business_t = system.time(business <- read_table("./data/business.csv"))
-  business <- rename(business, stars.avg = stars) # for pleasant merges with `reviews`
 
   print("Loading user...")
   users_t = system.time(users <- read_table("./data/user.csv"))
@@ -43,8 +44,7 @@ couple orders of magnitude faster than R Base's ~read.csv~:
   checkins_t = system.time(checkins <- read_table("./data/checkin.csv"))
 #+END_SRC
 
-#+RESULTS[0588b5778d45a9dcdecb72b4060cd20a3b1063b2]:
-
+#+RESULTS[a89ba1709758873becea8679fe72f2880558629e]:
 
 #+BEGIN_SRC R :session :exports results :results org
   total_load_time <- reviews_t + tips_t + business_t + users_t + checkins_t
@@ -53,7 +53,7 @@ couple orders of magnitude faster than R Base's ~read.csv~:
 
 #+RESULTS:
 #+BEGIN_SRC org
-Time to load CSV data into data.frames: 0.74 minutes
+Time to load CSV data into data.frames: 0.20 minutes
 #+END_SRC
 
 * Introduction
@@ -85,7 +85,7 @@ sprintf("%.2f%% of restaurants have undecipherable zip codes", percent_null_zips
 
 #+RESULTS:
 #+BEGIN_SRC org
-12.95% of restaurants have undecipherable zip codes
+12.61% of restaurants have undecipherable zip codes
 #+END_SRC
 
 Upon closer inspection, it is apparent that generally businesses do not provide
@@ -112,6 +112,20 @@ expensive and time consuming to do accurately. Instead, we can get away with
 just looking at the price range states for individual restaurants, which is much
 easier. It may be interesting to at some point put in the work/money to produce
 the zip code information.
+** Additional categories and misc data cleaning :ignore:
+#+BEGIN_SRC R :session :exports none :results  none
+  business <- merge(business, 
+                    rename(aggregate(stars ~ business_id,
+                                     data=reviews,
+                                     FUN=mean), 
+                           stars.avg = stars),
+                    by='business_id')
+  business <- rename(business, stars.median = stars) # for pleasant merges with `reviews`
+  business$price.range <- factor(business$price.range, labels=c('Low',
+                                                                'Medium Low', 
+                                                                'Medium High',
+                                                                'High'))
+#+END_SRC
 * Distribution
 ** Rating variance
  #+BEGIN_SRC R :session :exports code :results none :cache yes
@@ -125,7 +139,7 @@ the zip code information.
                           by = 'business_id')
    star_variance <- rename(star_variance, stars.var = stars)
  #+END_SRC
-*** rating variance ~ price range
+*** stars.var ~ price.range
    Because deriving demographics from geographical coordinates is a bit
    difficult, it might be useful to get an idea of the quality of the rating
    inconsistency by instead using restaurant price range, and not restaurant
@@ -141,10 +155,10 @@ the zip code information.
    #+RESULTS: stars_pr
    | price.range |        stars.var |
    |-------------+------------------|
-   |           1 |  1.5834411360414 |
-   |           2 | 1.55586274965935 |
-   |           3 | 1.67594320395976 |
-   |           4 | 1.91272081281026 |
+   | Low         |  1.5834411360414 |
+   | Medium Low  | 1.55586274965935 |
+   | Medium High | 1.67594320395976 |
+   | High        | 1.91272081281026 |
 
    It seems that the correlation between rating inconsistency and restaurant
    expensiveness is very small. Maybe instead of price range, we can look at
@@ -157,7 +171,7 @@ the zip code information.
 
    #+RESULTS: variance_vs_rating
    #+BEGIN_SRC org
-   -0.434429137743381
+   -0.447323849535184
    #+END_SRC
 
    #+BEGIN_SRC R :session :exports results :results org :var x=variance_vs_rating
@@ -167,21 +181,23 @@ the zip code information.
 
    #+RESULTS:
    #+BEGIN_SRC org
-     Correlation between rating variance and rating average: -0.43
+   Correlation between rating variance and rating average: -0.45
    #+END_SRC
    
-*** rating variance ~ rating average
+*** stars.var ~ stars.avg
    So, we see that the rating variance for restaurants correlates negatively
-   with their average ratings. That is, poorly rated restaurants tend to also
-   have more varied ratings. A possible conclusion is that restaurant ratings
-   are simply skewed positively, and therefore deviation from mean rating is
-   more often bounded at 5 stars than at 1 star (4 star restaurants will get
-   occaisional 2-star ratings, but of course never a 6-star rating). This can be
-   investigated with the following code:
+   with their average ratings. That is, poorly rated restaurants have a tendency
+   to also have more varied ratings. A possible conclusion is that restaurant
+   ratings are simply skewed positively, and therefore deviation from mean
+   rating is more often bounded at 5 stars than at 1 star (4 star restaurants
+   will get occaisional 2-star ratings, but of course never a 6-star rating). We
+   can investigate this idea with the following histographic depicting of
+   the mean restaurant rating distribution:
 
    #+BEGIN_SRC R :session :exports results :results graphics :file ./img/R_CCa0S6lS.png 
-     g <- ggplot(data=business, aes(business$stars.avg))
-     g + geom_histogram(breaks=seq(1,5,by=.5),
+     b <- filter(business, review_count > 20)
+     g <- ggplot(data=b, aes(stars.avg))
+     g + geom_histogram(breaks=seq(1,5,by=.10),
                         fill="red",
                         col="red",
                         alpha=.2) + 
@@ -193,17 +209,18 @@ the zip code information.
 #+RESULTS:
 [[file:./img/R_CCa0S6lS.png]]
     
-  So the suspicion turns out to be correct, and not very surprisingly. I think
-  that most people who have used the internet, and therefore have some
+  Above we see that the average restaurant rating shows significant positive
+  skew, and therefore the first hypothesis seems a bit more be believable. most
+  people who have experience with the internet, and therefore have some
   familiarity with online rating systems like Yelp, probably have an intuitive
-  idea about the tendency for these systems to have a strong positive skew. I
-  suspect a major reason for this is social pressure, a factor that is
-  particularly present on a Facebook-based website like Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is not a
-  unique idea]]), for which the median rating is a rather high
+  idea about this tendency for these ratings systems to have a very strong
+  positive skew. I suspect a major reason for this is social pressure, a factor
+  that is particularly present on a Facebook-based website like Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is
+  not a unique idea]]). For reference, the mean restaurant rating is a rather high
   src_R[:session]{sprintf("%.2f", mean(business$stars.avg))}
-  {{{results(=3.69485221359472=)}}}.
+  {{{results(=3.69=)}}} stars.
 
-*** rating average ~ price range                                     :ignore:
+*** stars.avg ~ price.range                                          :ignore:
     In any case, we might still wonder why there exists this correlation between
     rating inconsistency and average rating, yet also no such correlation
     whatsoever between rating inconsistency and restaurant expensiveness,
@@ -212,27 +229,34 @@ the zip code information.
     reason for this lack of correlation is because this is indeed a naive
     assumption:
 
-#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_JTmgqG9.png 
-  b <- aggregate(business, by=list(business$price.range), FUN=mean)[c('price.range', 'stars.avg')]
+#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_JTmgqG9.png 
+  b <- aggregate(stars.avg ~ price.range, data=business, FUN=mean)
   ggplot(b, aes(x=price.range, y=stars.avg)) + 
-      geom_bar(stat='identity', color='black', fill='yellow', alpha=.2)
+      geom_bar(stat='identity', color='black', fill='yellow', alpha=.2) +
+      scale_y_continuous(limits = c(0, 5)) + 
+      xlab('Price Range') +
+      ylab('Average rating (stars)') + 
+      ggtitle('Business Price Range vs Rating')
 #+END_SRC
 
 #+RESULTS:
 [[file:./img/R_JTmgqG9.png]]
 
 ** Price distribution
-#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_YzrIrkYy.png 
-  b <- business[!is.na(business$price.range), ] # priced restaurants only
-  b[, 'price.range'] <- factor(b$price.range, labels=c('low', 'mid-low', 
-                                                       'mid-high', 'high'))
-  ggplot(b, aes(x=stars.avg, fill=price.range)) + geom_histogram(binwidth=.5)
+The pricing makeup of our positively skewed restaurant rating distribution is
+not particularly surprising:
+#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_YzrIrkYy.png 
+  # priced restaurants only
+  ggplot(business[!is.na(business$price.range), ],
+         aes(x=stars.avg, fill=price.range)) + geom_histogram(binwidth=.5)
 #+END_SRC
 
 #+RESULTS:
 [[file:./img/R_YzrIrkYy.png]]
 
-Interestingly, this distribution is quite unique for non-priced restaurants:
+Interestingly, it seems that unpriced restaurants, i.e., restaurants for which a
+price range has not been assigned via user concensus, are, however, considerably more
+positively rated:
 #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_vvM4L9Z2.png 
   ggplot(business[is.na(business$price.range),], aes(x=stars.avg)) +
       geom_histogram(binwidth=.5, color='orange', fill='orange')
@@ -241,6 +265,8 @@ Interestingly, this distribution is quite unique for non-priced restaurants:
 #+RESULTS:
 [[file:./img/R_vvM4L9Z2.png]]
 
+This begs the question, is there a downward tendency for restaurant ratings as
+the profiles for these restaurants mature?
 #+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_3EqwcmXp.png 
 ggplot(star_variance, aes(x=stars)) + geom_histogram(color='red', fill='red')
 #+END_SRC
@@ -284,3 +310,27 @@ ggplot(star_variance, aes(x=stars)) + geom_histogram(color='red', fill='red')
 mean_no_pr_rev_count <- mean(bus[is.na(bus$price.range)]$review_count)
 mean_pr_rev_count <- mean(bus[!is.na(bus$price.range)]$review_count)
 #+END_SRC
+* BIN
+We can see the law of large numbers in action
+#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_vQgMpNec.png 
+  s <- sample_n(filter(star_variance, review_count > 30 ), 16000)
+  ggplot(filter(s, as.numeric(s$price.range) == 1), aes(x=review_count, y=stars.var)) + 
+      geom_point() + 
+      scale_y_continuous(limits = c(0, 4)) + 
+      scale_x_continuous(limits = c(0, 4000))
+#+END_SRC
+
+#+RESULTS:
+[[file:./img/R_vQgMpNec.png]]
+
+
+#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_8bbjovom.png 
+  s <- sample_n(filter(star_variance, review_count > 30 ), 16000)
+  ggplot(business, aes(x=review_count, y=stars.avg)) + 
+      geom_point() + 
+      scale_y_continuous(limits = c(0, 4)) + 
+      scale_x_continuous(limits = c(0, 4000))
+#+END_SRC
+
+#+RESULTS:
+[[file:./img/R_8bbjovom.png]]
