@@ -74,15 +74,23 @@ def allkeys(ff, noinc=[]):
     return list(s1)
 
 
-# This is useless
+# This is bad, but whatever
 def coerce_to_string(s):
     try:
-        return str(s).encode("ascii")
+        int(s)
+        return False
     except:
-        return ""
+        return True
 
-def encode_if_string(s):
-    return str(s).encode('utf-8')
+
+def process_val(val, delim):
+    """
+    Delimit lists so they can be interpreted by an R program properly
+    """
+    if isinstance(val, list):
+        if(any(map(lambda x: coerce_to_string(x), val))):
+            return delim.join(val)
+    return val
 
 
 def csvify_to_file(headers, infile, outfile):
@@ -98,11 +106,12 @@ def csvify_to_file(headers, infile, outfile):
             j = json.loads(line)
             row = []
             for h in headers:
-                row += [findval(j, h)]
+                row += [process_val(findval(j, h), "<+#+>")]
             csvwriter.writerow(row)
 
 
 # Convert the businesses file to csv
+print("Processing five json files:")
 print("[1/5] Converting 'business' json file to csv...")
 business_file = "data/json_origin/yelp_academic_dataset_business.json"
 bus_headers = allkeys(business_file,
