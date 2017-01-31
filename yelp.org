@@ -3,6 +3,60 @@
 
 #+OPTIONS: toc:2 num:nil
 
+* Core   :noexport:
+[[http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/][multiplot function]]
+#+BEGIN_SRC R :session :exports none :results output org 
+  # Multiple plot function
+  #
+  # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+  # - cols:   Number of columns in layout
+  # - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+  #
+  # If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+  # then plot 1 will go in the upper left, 2 will go in the upper right, and
+  # 3 will go all the way across the bottom.
+  #
+  multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+    library(grid)
+
+    # Make a list from the ... arguments and plotlist
+    plots <- c(list(...), plotlist)
+
+    numPlots = length(plots)
+
+    # If layout is NULL, then use 'cols' to determine layout
+    if (is.null(layout)) {
+      # Make the panel
+      # ncol: Number of columns of plots
+      # nrow: Number of rows needed, calculated from # of cols
+        layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                         ncol = cols, nrow = ceiling(numPlots/cols))
+    }
+
+   if (numPlots==1) {
+      print(plots[[1]])
+
+    } else {
+      # Set up the page
+      grid.newpage()
+      pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+      # Make each plot, in the correct location
+      for (i in 1:numPlots) {
+        # Get the i,j matrix positions of the regions that contain this subplot
+        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                        layout.pos.col = matchidx$col))
+      }
+    }
+  }
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC org
+#+END_SRC
+
 * Introduction
 The ubiquity of user review services is a modern phenomenon, being perhaps one
 of the most obvious and profoundly popular uses of the internet. Do you need to
@@ -74,7 +128,7 @@ order of magnitude or two faster than R Base's ~read.csv~:
 
 #+RESULTS:
 #+BEGIN_SRC org
-Time to load CSV data into data.frames: 0.52 minutes
+Time to load CSV data into data.frames: 0.54 minutes
 #+END_SRC
 
 * Preprocessing
@@ -94,8 +148,8 @@ they can be extracted from from the 'full address' data for each business.
 
   business <- mutate(business, zip_codes = zips)
 #+END_SRC
-How many ZIPs did we get? Dang, turns out that the about 1/8 of the addresses
-did not contain any zip codes that could be retreived.
+How many ZIPs did we get? Dang, turns out that only about 1/8 of the addresses
+contain a retreivable zip code.
 #+BEGIN_SRC R :session :exports none :results org
 percent_null_zips <- length(zips[is.na(zips)])/length(zips)*100
 
@@ -109,7 +163,7 @@ sprintf("%.2f%% of restaurants have undecipherable zip codes", percent_null_zips
 
 Upon closer inspection, it turns out that generally businesses do not provide
 very good address information, and in fact, many do not provide any at
-all. Luckily Yelp maintains longitude/latitude coordinates of each business for
+all. Luckily, Yelp maintains longitude/latitude coordinates of each business for
 the purpose of Google maps integration, which we can confidently affirm with the
 following assertion:
 #+BEGIN_SRC R :session :exports both :results org
@@ -147,7 +201,7 @@ work/money to produce the zip code information.
 #+END_SRC
 * Distribution
 ** Inconsistency of ratings
- #+BEGIN_SRC R :session :exports code :results none :cache yes
+ #+BEGIN_SRC R :session :exports code :results none :cache no
    star_variance <- merge(aggregate(stars ~ business_id,
                                     data = reviews, 
                                     FUN = var),
@@ -213,9 +267,80 @@ work/money to produce the zip code information.
               title="Correlation between mean business ratings and business rating variances")
    #+END_SRC
 
-#+RESULTS:
-[[file:./img/R_5QvlYFse.png]]
+  #+NAME: star-dists
+  #+BEGIN_SRC R :session :exports none :results silenced :cache yes
+    star_freq<- function(r, rating) {
+        sum(r == rating)/length(r)
+    }
+    # There is definitely a nicer way to do this, but I'm done with that 
+    # rabbit hole.
+    s1 <- rename(aggregate(stars ~ business_id,
+                           data=reviews,
+                           FUN=function(stars) star_freq(stars, 1)),
+                 one=stars)
 
+    s2 <- rename(aggregate(stars ~ business_id,
+                           data=reviews,
+                           FUN=function(stars) star_freq(stars, 2)),
+                 two=stars)
+
+    s3 <- rename(aggregate(stars ~ business_id,
+                           data=reviews,
+                           FUN=function(stars) star_freq(stars, 3)),
+                 three=stars)
+
+    s4 <- rename(aggregate(stars ~ business_id,
+                           data=reviews,
+                           FUN=function(stars) star_freq(stars, 4)),
+                 four=stars)
+
+    s5 <- rename(aggregate(stars ~ business_id,
+                           data=reviews,
+                           FUN=function(stars) star_freq(stars, 5)),
+                 five=stars)
+
+
+    business <- merge(business, Reduce(merge,list(s1, s2, s3, s4, s5)),
+                      by="business_id")
+  #+END_SRC
+
+  #+RESULTS[7bad3f915b246f2b57ed46b5f016196973dc16ff]: star-dists
+
+  #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_LfYln761.png 
+    r <- filter(business, review_count > 100)
+    ggplot(r, aes(x=one, y=five, color = price.range)) +
+        geom_point()
+  #+END_SRC
+
+  #+RESULTS:
+  [[file:./img/R_LfYln761.png]]
+
+  #+BEGIN_SRC R :session :exports none :results output org 
+    g1 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 1)), one=stars)
+    g2 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 2)), two=stars)
+    g3 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 3)), three=stars)
+    g4 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 4)), four=stars)
+    g5 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 5)), five=stars)
+
+    business <- merge(business, Reduce(merge,list(g1, g2, g3, g4, g5)), by="business_id")
+  #+END_SRC
+
+#+BEGIN_SRC R :session :exports both :results output org 
+  star_freq<- function(rs) {   
+      tabulate(rs)/length(rs)
+  }
+
+  business <- merge(rename(aggregate(stars ~ business_id,
+                                     data=reviews,
+                                     FUN=star_freq),
+                           stars.dist=stars),
+                    business,
+                    by="business_id")
+#+END_SRC
+
+#+RESULTS:
+#+BEGIN_SRC org
+#+END_SRC
 
 *** stars.var ~ stars.avg
    So, we see that the rating variance for restaurants correlates negatively
@@ -279,13 +404,15 @@ I suspect an explanation for this indescrepency is simply that the value to
 which these ratings refer is not very well in line with what we, as consumers,
 intuitively and automatically summarize them to mean. So, while as a consumer we
 think of these ratings, without much actual precise consideration, as a general
-measure of "goodness", with zero being un-good and five being very good, of
-course. However, how do we think of these ratings when we actually contribute
-them? Indeed, it might be more accurate to describe my own system as how little
-my satisfaction with the restaurant deviated from what I had expected. In this way,
-I've normalized my perspective on the restaurant, but without actually yielding
-me any bang-for-the-buck measure. I consider this a bad and unhelpful way to contribute
-my opinion on the business, but this is the way that I feel I am most naturally inclined. 
+measure of "goodness", with zero being un-good and five being very good, as
+reviewers we (the collective "we") are likely to make all of the considerations
+required for an accurate evaluation (e.g., average restaurant goodness, pricing,
+etc). Indeed, it might be more accurate to describe my own system as how little
+my satisfaction with the restaurant deviated from my expected experience. In this
+way, I've normalized my perspective on the restaurant, but without actually
+yielding me any bang-for-the-buck measure. I consider this a bad and unhelpful
+way to contribute my opinion on the business, but this is the way that I feel I
+am most naturally inclined.
 ** Price distribution
 The pricing makeup of our positively skewed restaurant rating distribution is
 not particularly surprising:
@@ -323,6 +450,10 @@ these unrated restaurants. This begs the question, is there a downward tendency
 for restaurant ratings as their profiles mature? The fact that unrated
 restaurants tend to be less those with less mature profiles is glaringly
 suspicious.
+
+** TODO Sample businesses by first 20 or so reviews (chronologically)
+- See if they have a similar distribution to this rating average stuff
+** REST
 #+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_3EqwcmXp.png 
 s <- star_variance[star_variance$review_count > 20, ]
 ggplot(s, aes(x=stars.var)) + geom_histogram(color='red', fill='red', binwidth=.1)
@@ -363,13 +494,3 @@ We can see the law of large numbers in action
 [[file:./img/R_vQgMpNec.png]]
 
 
-#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_8bbjovom.png 
-  s <- sample_n(filter(star_variance, review_count > 30 ), 16000)
-  ggplot(business, aes(x=review_count, y=stars.avg)) + 
-      geom_point() + 
-      scale_y_continuous(limits = c(0, 4)) + 
-      scale_x_continuous(limits = c(0, 4000))
-#+END_SRC
-
-#+RESULTS:
-[[file:./img/R_8bbjovom.png]]
