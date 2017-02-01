@@ -1,0 +1,694 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2017-01-31 Tue 01:12 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title><b><font color = "C2492F">Sensibility of Yelp Rating Trends</font></b></title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Dodge W. Coates" />
+<style type="text/css">
+  html{font-family:sans-serif;
+       -ms-text-size-adjust:100%;
+       -webkit-text-size-adjust:100%}
+  body{margin:0}
+  article,aside,details,figcaption,figure,footer,header,main,menu,nav,section,summary{display:block}
+  audio,canvas,progress,video{display:inline-block}
+  audio:not([controls]){display:none;
+                        height:0}
+  progress{vertical-align:baseline}
+  [hidden],template{display:none}
+  a{background-color:transparent;
+    -webkit-text-decoration-skip:objects}
+  a:active,a:hover{outline-width:0}
+  abbr[title]{border-bottom:none;
+              text-decoration:underline;
+              text-decoration:underline dotted}
+  b,strong{font-weight:inherit;
+           font-weight:bolder}
+  dfn{font-style:italic}
+  h1{font-size:2em;
+     margin:.67em 0}
+  mark{background-color:#ff0;
+       color:#000}
+  small{font-size:80%}
+  sub,sup{font-size:75%;
+          line-height:0;
+          position:relative;
+          vertical-align:baseline}
+  sub{bottom:-.25em}
+  sup{top:-.5em}
+  img{border-style:none}
+  svg:not(:root){overflow:hidden}
+  code,kbd,pre,samp{font-family:monospace;
+                    font-size:1em}
+  figure{margin:1em 40px}
+  hr{box-sizing:content-box;
+     height:0;
+     overflow:visible}
+  button,input,select,textarea{font:inherit;
+                               margin:0}
+  optgroup{font-weight:700}
+  button,input{overflow:visible}
+  button,select{text-transform:none}
+  [type=reset],[type=submit],button,html [type=button]{-webkit-appearance:button}
+  [type=button]::-moz-focus-inner,[type=reset]::-moz-focus-inner,[type=submit]::-moz-focus-inner,button::-moz-focus-inner{border-style:none;
+                                                                                                                          padding:0}
+  [type=button]:-moz-focusring,[type=reset]:-moz-focusring,[type=submit]:-moz-focusring,button:-moz-focusring{outline:1px dotted ButtonText}
+  fieldset{border:1px solid silver;
+           margin:0 2px;
+           padding:.35em .625em .75em}
+  legend{box-sizing:border-box;
+         color:inherit;
+         display:table;
+         max-width:100%;
+         padding:0;
+         white-space:normal}
+  textarea{overflow:auto}
+  [type=checkbox],[type=radio]{box-sizing:border-box;
+                               padding:0}
+  [type=number]::-webkit-inner-spin-button,[type=number]::-webkit-outer-spin-button{height:auto}
+  [type=search]{-webkit-appearance:textfield;
+                outline-offset:-2px}
+  [type=search]::-webkit-search-cancel-button,[type=search]::-webkit-search-decoration{-webkit-appearance:none}
+  ::-webkit-input-placeholder{color:inherit;
+                              opacity:.54}
+  ::-webkit-file-upload-button{-webkit-appearance:button;
+                               font:inherit}
+  body{width:95%;
+       margin:2%;
+       font:normal normal normal 17px/1.6em Helvetica,sans-serif;
+       color:#333}
+  @media (min-width:769px){body{width:700px;
+                                margin-left:5vw}
+  }
+  .title{margin:auto;
+         color:#000}
+  .subtitle,.title{text-align:center}
+  .subtitle{font-size:medium;
+            font-weight:700}
+  .abstract{margin:auto;
+            width:80%;
+            font-style:italic}
+  .abstract p:last-of-type:before{content:"    ";
+                                  white-space:pre}
+  .status{font-size:90%;
+          margin:2em auto}
+  [class^=section-number-]{margin-right:.5em}
+  #footnotes{font-size:90%}
+  .footpara{display:inline;
+            margin:.2em auto}
+  .footdef{margin-bottom:1em}
+  .footdef sup{padding-right:.5em}
+  a{color:#527d9a;
+    text-decoration:none}
+  a:hover{color:#035;
+          border-bottom:1px dotted}
+  figure{padding:0;
+         margin:0;
+         text-align:center}
+  img{max-width:100%;
+      vertical-align:middle}
+  @media (min-width:769px){img{max-width:85vw;
+                               margin:auto}
+  }
+  .MathJax_Display{margin:0!important;
+                   width:90%!important}
+  h1,h2,h3,h4,h5,h6{color:#a5573e;
+                    line-height:1.6em;
+                    font-family:Georgia,serif}
+  h4,h5,h6{font-size:1em}
+  dt{font-weight:700}
+  table{margin:auto;
+        border-top:2px solid;
+        border-collapse:collapse}
+  table,thead{border-bottom:2px solid}
+  table td+td,table th+th{border-left:1px solid gray}
+  table tr{border-top:1px solid #d3d3d3}
+  td,th{padding:5px 10px;
+        vertical-align:middle}
+  caption.t-above{caption-side:top}
+  caption.t-bottom{caption-side:bottom}
+  th.org-center,th.org-left,th.org-right{text-align:center}
+  td.org-right{text-align:right}
+  td.org-left{text-align:left}
+  td.org-center{text-align:center}
+  code{padding:2px 5px;
+       margin:auto 1px;
+       border:1px solid #ddd;
+       border-radius:3px;
+       background-clip:padding-box;
+       color:#333;
+       font-size:80%}
+  blockquote{margin:1em 2em;
+             padding-left:1em;
+             border-left:3px solid #ccc}
+  kbd{background-color:#f7f7f7;
+      font-size:80%;
+      margin:0 .1em;
+      padding:.1em .6em}
+  .todo{color:red}
+  .done,.todo{font-family:Lucida Console,monospace}
+  .done{color:green}
+  .priority{color:orange}
+  .priority,.tag{font-family:Lucida Console,monospace}
+  .tag{background-color:#eee;
+       font-size:80%;
+       font-weight:400;
+       padding:2px}
+  .timestamp{color:#bebebe}
+  .timestamp-kwd{color:#5f9ea0}
+  .org-right{margin-left:auto;
+             margin-right:0;
+             text-align:right}
+  .org-left{margin-left:0;
+            margin-right:auto;
+            text-align:left}
+  .org-center{margin-left:auto;
+              margin-right:auto;
+              text-align:center}
+  .underline{text-decoration:underline}
+  #postamble p,#preamble p{font-size:90%;
+                           margin:.2em}
+  p.verse{margin-left:3%}
+  pre{border:1px solid #ccc;
+
+      box-shadow:3px 3px 3px #eee;
+      font-family:Lucida Console,monospace;
+      margin:1.2em;
+      padding:8pt}
+  pre.src{overflow:auto;
+          padding-top:1.2em;
+          position:relative;
+          font-size:80%}
+  pre.src:before{background-color:#fff;
+                 border:1px solid #000;
+                 display:none;
+                 padding:3px;
+                 position:absolute;
+                 right:10px;
+                 top:.6em}
+  pre.src:hover:before{display:inline}
+  pre.src-sh:before{content:'sh'}
+  pre.src-bash:before{content:'bash'}
+  pre.src-emacs-lisp:before{content:'Emacs Lisp'}
+  pre.src-R:before{content:'R'}
+  pre.src-org:before{content:'Org'}
+  pre.src-c+:before{content:'C++'}
+  pre.src-c:before{content:'C'}
+  pre.src-html:before{content:'HTML'}
+  pre.example{overflow:auto;
+              padding-top:1.2em;
+              position:relative;
+              font-size:80%}
+  .inlinetask{background:#ffc;
+              border:2px solid gray;
+              margin:10px;
+              padding:10px}
+  #org-div-home-and-up{font-size:70%;
+                       text-align:right;
+                       white-space:nowrap}
+  .linenr{font-size:smaller}
+  .code-highlighted{background-color:#ff0}
+  #bibliography{font-size:90%}
+  #bibliography table{width:100%}
+  .creator{display:block}@media (min-width:769px){.creator{display:inline;
+                                                           float:right}}</style>
+<link href="/home/dodge/.emacs.d/leuven-theme.css" rel="stylesheet">
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2013 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<h1 class="title"><b><font color = "C2492F">Sensibility of Yelp Rating Trends</font></b></h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orga4ec22e">Introduction</a></li>
+<li><a href="#orged14d11">Methodology</a></li>
+<li><a href="#org766726f">Initializing data</a></li>
+<li><a href="#orgd2633e2">Preprocessing</a>
+<ul>
+<li><a href="#org850bd75">ZIP codes</a></li>
+</ul>
+</li>
+<li><a href="#org21d5a2f">Distribution</a>
+<ul>
+<li><a href="#org963ef53">Inconsistency of ratings</a></li>
+<li><a href="#org5e886df">Price distribution</a></li>
+<li><a href="#org672d6b2"><span class="todo TODO">TODO</span> Sample businesses by first 20 or so reviews (chronologically)</a></li>
+<li><a href="#org4f17d28">REST</a></li>
+</ul>
+</li>
+<li><a href="#orgf035b8d">BIN</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orga4ec22e" class="outline-2">
+<h2 id="orga4ec22e">Introduction</h2>
+<div class="outline-text-2" id="text-orga4ec22e">
+<p>
+The ubiquity of user review services is a modern phenomenon, being perhaps one
+of the most obvious and profoundly popular uses of the internet. Do you need to
+know the general opinion about something? Google it. Google an interesting pair
+of headphones to read its Amazon reviews, google the new Marvel movie to get
+movie-goer reviews from IMDb, google the neighborhood restaurant to peruse its
+Yelp reviews. Yelp reviewership is the subject of this blog post, and in
+particular, a look at how reviewers tend to disbalance their rating
+standards. This endeavor begins by taking a look at rating consistency by
+context; the entry point being an investigation into the suspicion that
+restaurants in less affluent neighborhoods tend to have higher rating variance
+than those in more affluent neighborhoods.
+</p>
+</div>
+</div>
+<div id="outline-container-orged14d11" class="outline-2">
+<h2 id="orged14d11">Methodology</h2>
+<div class="outline-text-2" id="text-orged14d11">
+<p>
+This analysis uses the Yelp academic dataset, which consists of about 2.6
+million user reviews, plus some relevant category data (~85k businesses, ~700k
+users, etc). This data is stored natively in json, though the data is quite
+flat, even more so one discounts some of the less useful bits of
+information. Therefore the json was trimmed and converted to a csv format via a
+python script, and the resulting csv files, uncompressed, total ~2 gigabytes on
+disk. R is the language of choice for the analysis, with the data.table often
+coming in handy for its speed.
+</p>
+</div>
+</div>
+<div id="outline-container-org766726f" class="outline-2">
+<h2 id="org766726f">Initializing data</h2>
+<div class="outline-text-2" id="text-org766726f">
+<p>
+Data has been preprocessed by a small Python script that flattens the source
+json into csv and trims off useless data.
+</p>
+</div>
+<div class="outline-text-2" id="text-org766726f">
+<p>
+Need to load up about 2.3 gigabytes of tabular data and keep track of read
+time. Thankfully <code>fread</code> from the the <code>data.table</code> package makes this process an
+order of magnitude or two faster than R Base's <code>read.csv</code>:
+</p>
+<div class="org-src-container">
+<pre class="src src-org">Time to load CSV data into data.frames: 0.34 minutes
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgd2633e2" class="outline-2">
+<h2 id="orgd2633e2">Preprocessing</h2>
+<div class="outline-text-2" id="text-orgd2633e2">
+<p>
+Zip code info for each business would be quite helpful for looking into the
+demographical review trends. However, ZIP code info is not explicitly
+required of businesses when registering with Yelp, so we have to see how easily
+they can be extracted from from the 'full address' data for each business.
+</p>
+</div>
+<div id="outline-container-org850bd75" class="outline-3">
+<h3 id="org850bd75">ZIP codes</h3>
+<div class="outline-text-3" id="text-org850bd75">
+<p>
+How many ZIPs did we get? Dang, turns out that only about 1/8 of the addresses
+contain a retreivable zip code.
+Upon closer inspection, it turns out that generally businesses do not provide
+very good address information, and in fact, many do not provide any at
+all. Luckily, Yelp maintains longitude/latitude coordinates of each business for
+the purpose of Google maps integration, which we can confidently affirm with the
+following assertion:
+</p>
+<div class="org-src-container">
+<pre class="src src-R">longs <span class="org-constant">&lt;-</span> grep(<span class="org-string">'[[:digit:]]+.[[:digit:]]*'</span>, business$longitude)
+lats <span class="org-constant">&lt;-</span> grep(<span class="org-string">'[[:digit:]]+.[[:digit:]]*'</span>, business$latitude)
+stopifnot(length(longs) == length(lats),
+          length(longs) == length(business$latitude))
+print(<span class="org-string">"Done."</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-org">Done.
+</pre>
+</div>
+<p>
+While geographical coordinates are readily at hand, it turns out that reverse
+geocoding, the process of converting geographic coordinates to zip codes or the
+like, costs money and is time consuming to do accurately. Instead, it could be
+useful to get an idea of the quality of the rating inconsistency by instead
+using restaurant price range, and not restaurant neighborhood median income (or
+the like), as a feauture of interest.  It may be fun to at some point put in the
+work/money to produce the zip code information.
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org21d5a2f" class="outline-2">
+<h2 id="org21d5a2f">Distribution</h2>
+<div class="outline-text-2" id="text-org21d5a2f">
+</div><div id="outline-container-org963ef53" class="outline-3">
+<h3 id="org963ef53">Inconsistency of ratings</h3>
+<div class="outline-text-3" id="text-org963ef53">
+<div class="org-src-container">
+<pre class="src src-R">star_variance <span class="org-constant">&lt;-</span> merge(aggregate(stars ~ business_id,
+                                 data = reviews, 
+                                 FUN = var),
+                       na.omit(business[,c(<span class="org-string">'price.range'</span>,
+                                           <span class="org-string">'stars.avg'</span>,
+                                           <span class="org-string">'business_id'</span>,
+                                           <span class="org-string">'review_count'</span>)]),
+                       by = <span class="org-string">'business_id'</span>)
+star_variance <span class="org-constant">&lt;-</span> rename(star_variance, stars.var = stars)
+</pre>
+</div>
+</div>
+<div id="outline-container-org4cc4729" class="outline-4">
+<h4 id="org4cc4729">stars.var ~ price.range</h4>
+<div class="outline-text-4" id="text-org4cc4729">
+<p>
+We can aggregate the businesses by price range and average out their rating
+variance to get an idea about how restaurant pricing correlates with reviewer
+consistency:
+</p>
+<div class="org-src-container">
+<pre class="src src-R" id="org3c90adc">aggregate(stars.var ~ price.range, data = star_variance, FUN = mean)
+</pre>
+</div>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="all" frame="all">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">price.range</th>
+<th scope="col" class="org-right">stars.var</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">Low</td>
+<td class="org-right">1.5834411360414</td>
+</tr>
+
+<tr>
+<td class="org-left">Medium Low</td>
+<td class="org-right">1.55586274965935</td>
+</tr>
+
+<tr>
+<td class="org-left">Medium High</td>
+<td class="org-right">1.67594320395976</td>
+</tr>
+
+<tr>
+<td class="org-left">High</td>
+<td class="org-right">1.91272081281026</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+It seems that the correlation between rating inconsistency and restaurant
+expensiveness is very small. Maybe instead of price range, we can look at
+rating average:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-R" id="org20a50a5">cor(star_variance$stars.var, star_variance$stars.avg, use=<span class="org-string">'complete'</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-org">Correlation between rating variance and rating average: -0.45
+</pre>
+</div>
+
+<p>
+So we've gotten a bit far at this point from the original idea of the effect
+of neighborhood demographics on rating consistency, but this might still be
+something worth exploring. We can look at the relationship between five-star
+and one-star vote rates for all businesses:
+</p>
+
+
+<div class="figure">
+<p><img src="./img/R_LfYln761.png" alt="R_LfYln761.png" />
+</p>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-R"><span class="org-function-name">star_freq</span><span class="org-constant">&lt;-</span> <span class="org-keyword">function</span>(rs) {   
+    tabulate(rs)/length(rs)
+}
+
+business <span class="org-constant">&lt;-</span> merge(rename(aggregate(stars ~ business_id,
+                                   data=reviews,
+                                   FUN=star_freq),
+                         stars.dist=stars),
+                  business,
+                  by=<span class="org-string">"business_id"</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-org"></pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org3a5f82e" class="outline-4">
+<h4 id="org3a5f82e">stars.var ~ stars.avg</h4>
+<div class="outline-text-4" id="text-org3a5f82e">
+<p>
+So, we see that the rating variance for restaurants correlates negatively
+with their average ratings. That is, poorly rated restaurants have a tendency
+to also have more varied ratings. A possible conclusion is that restaurant
+ratings are simply skewed positively, and therefore deviation from mean
+rating is more often bounded at 5 stars than at 1 star (4 star restaurants
+will get occaisional 2-star ratings, but of course never a 6-star rating). We
+can investigate this idea with the following histographic depicting of the
+mean restaurant rating distribution. Note that we limit ourselves to those
+businesses with at least 20 reviews:
+</p>
+
+
+<div class="figure">
+<p><img src="./img/R_CCa0S6lS.png" alt="R_CCa0S6lS.png" />
+</p>
+</div>
+
+<p>
+Above we see that the average restaurant rating shows significant positive
+skew, and therefore the first hypothesis seems a bit more be believable. Most
+people who have experience with the internet, and therefore have some
+familiarity with online rating systems like Yelp, probably have an intuitive
+idea about this tendency for these ratings systems to have a very strong
+positive skew. I suspect a major reason for this is perceived social pressure,
+particularly in the case of a Facebook-driven website such as Yelp (<a href="http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/">which is
+not a unique idea</a>). For reference, the mean business rating is a rather high
+<code>3.69</code> stars.
+</p>
+</div>
+</div>
+
+<div class="outline-text-3" id="text-org963ef53">
+<p>
+In any case, we might still wonder why there exists this correlation between
+rating inconsistency and average rating, yet also no such correlation
+whatsoever between rating inconsistency and restaurant expensiveness,
+statements which we might expect, possibly naively, to be quite similar
+(i.e., more expensive restaurants are generally rated more highly). The
+reason for this lack of correlation is because this is indeed a naive
+assumption:
+</p>
+
+
+<div class="figure">
+<p><img src="./img/R_Sr5sdYpc.png" alt="R_Sr5sdYpc.png" />
+</p>
+</div>
+
+<p>
+I suspect an explanation for this indescrepency is simply that the value to
+which these ratings refer is not very well in line with what we, as consumers,
+intuitively and automatically summarize them to mean. So, while as a consumer we
+think of these ratings, without much actual precise consideration, as a general
+measure of "goodness", with zero being un-good and five being very good, as
+reviewers we (the collective "we") are likely to make all of the considerations
+required for an accurate evaluation (e.g., average restaurant goodness, pricing,
+etc). Indeed, it might be more accurate to describe my own system as how little
+my satisfaction with the restaurant deviated from my expected experience. In this
+way, I've normalized my perspective on the restaurant, but without actually
+yielding me any bang-for-the-buck measure. I consider this a bad and unhelpful
+way to contribute my opinion on the business, but this is the way that I feel I
+am most naturally inclined.
+</p>
+</div>
+</div>
+<div id="outline-container-org5e886df" class="outline-3">
+<h3 id="org5e886df">Price distribution</h3>
+<div class="outline-text-3" id="text-org5e886df">
+<p>
+The pricing makeup of our positively skewed restaurant rating distribution is
+not particularly surprising:
+</p>
+
+<div class="figure">
+<p><img src="./img/R_YzrIrkYy.png" alt="R_YzrIrkYy.png" />
+</p>
+</div>
+
+<p>
+Interestingly, it seems that unpriced restaurants, i.e. restaurants for which a
+price range has not yet been assigned via user concensus, are, however, not only
+considerably more positively rated, but also in a seemingly linear fashion:
+</p>
+
+<div class="figure">
+<p><img src="./img/R_vvM4L9Z2.png" alt="R_vvM4L9Z2.png" />
+</p>
+</div>
+
+<p>
+We can see clearly that there is a much more siginificant positive skew for
+these unrated restaurants. This begs the question, is there a downward tendency
+for restaurant ratings as their profiles mature? The fact that unrated
+restaurants tend to be less those with less mature profiles is glaringly
+suspicious.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org672d6b2" class="outline-3">
+<h3 id="org672d6b2"><span class="todo TODO">TODO</span> Sample businesses by first 20 or so reviews (chronologically)</h3>
+<div class="outline-text-3" id="text-org672d6b2">
+<ul class="org-ul">
+<li>See if they have a similar distribution to this rating average stuff</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org4f17d28" class="outline-3">
+<h3 id="org4f17d28">REST</h3>
+<div class="outline-text-3" id="text-org4f17d28">
+<div class="org-src-container">
+<pre class="src src-R">s <span class="org-constant">&lt;-</span> star_variance[star_variance$review_count &gt; 20, ]
+ggplot(s, aes(x=stars.var)) + geom_histogram(color=<span class="org-string">'red'</span>, fill=<span class="org-string">'red'</span>, binwidth=.1)
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="./img/R_3EqwcmXp.png" alt="R_3EqwcmXp.png" />
+</p>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-R">s <span class="org-constant">&lt;-</span> star_variance[star_variance$review_count &gt; 100, ]
+ggplot(s, aes(x=stars.var, y=review_count)) + geom_point()
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="./img/R_wGL1DyI7.png" alt="R_wGL1DyI7.png" />
+</p>
+</div>
+</div>
+
+<div id="outline-container-org5ed35b8" class="outline-4">
+<h4 id="org5ed35b8">Basic stuff</h4>
+<div class="outline-text-4" id="text-org5ed35b8">
+<div class="org-src-container">
+<pre class="src src-org">Average rating across all reviews: 3.764
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgf035b8d" class="outline-2">
+<h2 id="orgf035b8d">BIN</h2>
+<div class="outline-text-2" id="text-orgf035b8d">
+<p>
+We can see the law of large numbers in action
+</p>
+<div class="org-src-container">
+<pre class="src src-R">s <span class="org-constant">&lt;-</span> sample_n(filter(star_variance, review_count &gt; 30 ), 16000)
+ggplot(filter(s, as.numeric(s$price.range) == 1), aes(x=review_count, y=stars.var)) + 
+    geom_point() + 
+    scale_y_continuous(limits = c(0, 4)) + 
+    scale_x_continuous(limits = c(0, 4000))
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="./img/R_vQgMpNec.png" alt="R_vQgMpNec.png" />
+</p>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: Dodge W. Coates</p>
+<p class="date">Created: 2017-01-31 Tue 01:12</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
