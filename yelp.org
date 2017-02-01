@@ -255,20 +255,11 @@ work/money to produce the zip code information.
 
    So we've gotten a bit far at this point from the original idea of the effect
    of neighborhood demographics on rating consistency, but this might still be
-   something worth exploring. We can see below a plot of average businesses
-   rating vs average rating variance:
-   #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_5QvlYFse.png 
-     s <- star_variance[star_variance$review_count > 100, ]
-     ggplot(s, aes(x=stars.var, y=stars.avg, color=price.range)) + 
-         geom_point() +
-         labs(color="Price Range",
-              x='Rating variance',
-              y='Rating average (mean)',
-              title="Correlation between mean business ratings and business rating variances")
-   #+END_SRC
+   something worth exploring. We can look at the relationship between five-star
+   and one-star vote rates for all businesses:
 
   #+NAME: star-dists
-  #+BEGIN_SRC R :session :exports none :results silenced :cache yes
+  #+BEGIN_SRC R :session :exports none :results silenced :cache no
     star_freq<- function(r, rating) {
         sum(r == rating)/length(r)
     }
@@ -306,13 +297,22 @@ work/money to produce the zip code information.
 
   #+RESULTS[7bad3f915b246f2b57ed46b5f016196973dc16ff]: star-dists
 
+  #+NAME: basic-star-var-graph
   #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_LfYln761.png 
+    library(scales)
     r <- filter(business, review_count > 100)
     ggplot(r, aes(x=one, y=five, color = price.range)) +
-        geom_point()
+        geom_point() +
+        scale_x_continuous(labels = percent) +
+        scale_y_continuous(labels = percent) + 
+        labs(color = "Business Price Range", 
+             x = ("One star"),
+             y = ("Five star"), 
+             title="Rating composition: five-star vs one-star") 
+
   #+END_SRC
 
-  #+RESULTS:
+  #+RESULTS: basic-star-var-graph
   [[file:./img/R_LfYln761.png]]
 
   #+BEGIN_SRC R :session :exports none :results output org 
@@ -325,22 +325,18 @@ work/money to produce the zip code information.
     business <- merge(business, Reduce(merge,list(g1, g2, g3, g4, g5)), by="business_id")
   #+END_SRC
 
-#+BEGIN_SRC R :session :exports both :results output org 
-  star_freq<- function(rs) {   
-      tabulate(rs)/length(rs)
-  }
+  #+BEGIN_SRC R :session :exports both :results output org 
+    star_freq<- function(rs) {   
+        tabulate(rs)/length(rs)
+    }
 
-  business <- merge(rename(aggregate(stars ~ business_id,
-                                     data=reviews,
-                                     FUN=star_freq),
-                           stars.dist=stars),
-                    business,
-                    by="business_id")
-#+END_SRC
-
-#+RESULTS:
-#+BEGIN_SRC org
-#+END_SRC
+    business <- merge(rename(aggregate(stars ~ business_id,
+                                       data=reviews,
+                                       FUN=star_freq),
+                             stars.dist=stars),
+                      business,
+                      by="business_id")
+  #+END_SRC
 
 *** stars.var ~ stars.avg
    So, we see that the rating variance for restaurants correlates negatively
@@ -387,18 +383,17 @@ work/money to produce the zip code information.
     reason for this lack of correlation is because this is indeed a naive
     assumption:
 
-#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_JTmgqG9.png 
-  b <- aggregate(stars.avg ~ price.range, data=business, FUN=mean)
-  ggplot(b, aes(x=price.range, y=stars.avg)) + 
-      geom_bar(stat='identity', color='black', fill='yellow', alpha=.2) +
-      scale_y_continuous(limits = c(0, 5)) + 
-      xlab('Price Range') +
-      ylab('Average rating (stars)') + 
-      ggtitle('Business Price Range vs Rating')
+#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_Sr5sdYpc.png 
+  ggplot(business, aes(x=price.range, y=stars.avg, fill=price.range)) + 
+      geom_boxplot() + 
+      stat_summary(fun.y="mean", geom="point") + 
+      labs(x = "Price Range",
+           y = "Rating average",
+           title = "Rating distribution by price ranges")
 #+END_SRC
 
 #+RESULTS:
-[[file:./img/R_JTmgqG9.png]]
+[[file:./img/R_Sr5sdYpc.png]]
 
 I suspect an explanation for this indescrepency is simply that the value to
 which these ratings refer is not very well in line with what we, as consumers,
