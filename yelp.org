@@ -1,7 +1,7 @@
 #+HTML_HEAD: <link href="/home/dodge/.emacs.d/leuven-theme.css" rel="stylesheet">
-#+TITLE: *@@html:<font color = "C2492F">@@Sensibility of Yelp Rating Trends@@html:</font>@@*
-
 #+OPTIONS: toc:2 num:nil
+
+#+TITLE: Sensibility of Yelp Rating Trends
 
 * Core   :noexport:
 [[http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/][multiplot function]]
@@ -79,8 +79,8 @@ python script, and the resulting csv files, uncompressed, total ~2 gigabytes on
 disk. R is the language of choice for the analysis, with the data.table often
 coming in handy for its speed.
 * Initializing data 
-Data has been preprocessed by a small Python script that flattens the source
-json into csv and trims off useless data.
+  Data has been preprocessed by a small Python script that flattens the source
+  json into csv and trims off useless data.
 ** Libraries :noexport:
 Necessary libraries
 #+BEGIN_SRC R :session :exports none :results none
@@ -120,6 +120,7 @@ order of magnitude or two faster than R Base's ~read.csv~:
 #+END_SRC
 
 #+RESULTS[a89ba1709758873becea8679fe72f2880558629e]:
+
 
 #+BEGIN_SRC R :session :exports results :results org
   total_load_time <- reviews_t + tips_t + business_t + users_t + checkins_t
