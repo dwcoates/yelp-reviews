@@ -5,7 +5,7 @@
 
 * Core   :noexport:
 [[http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/][multiplot function]]
-#+BEGIN_SRC R :session :exports none :results output org 
+#+BEGIN_SRC R :session :exports none :results output org  :tangle ./yelp.r
   # Multiple plot function
   #
   # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
@@ -83,7 +83,7 @@ coming in handy for its speed.
   json into csv and trims off useless data.
 ** Libraries :noexport:
 Necessary libraries
-#+BEGIN_SRC R :session :exports none :results none
+#+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
   library(ggplot2)
   library(data.table)
   library(dplyr)
@@ -95,7 +95,7 @@ Necessary libraries
 Need to load up about 2.3 gigabytes of tabular data and keep track of read
 time. Thankfully ~fread~ from the the ~data.table~ package makes this process an
 order of magnitude or two faster than R Base's ~read.csv~:
-#+BEGIN_SRC R :session :exports none :cache no
+#+BEGIN_SRC R :session :exports none :cache no :tangle ./yelp.r
   read_table <- function(filename) {                                          
       table <- fread(filename)  # use fread to quickly read csv file
       # Make sure there ren't any unacceptable chracters in the column names
@@ -122,7 +122,7 @@ order of magnitude or two faster than R Base's ~read.csv~:
 #+RESULTS[a89ba1709758873becea8679fe72f2880558629e]:
 
 
-#+BEGIN_SRC R :session :exports results :results org
+#+BEGIN_SRC R :session :exports results :results org :tangle ./yelp.r
   total_load_time <- reviews_t + tips_t + business_t + users_t + checkins_t
   sprintf("Time to load CSV data into data.frames: %.2f minutes", total_load_time["elapsed"]/60.0)
 #+END_SRC
@@ -138,7 +138,7 @@ demographical review trends. However, ZIP code info is not explicitly
 required of businesses when registering with Yelp, so we have to see how easily
 they can be extracted from from the 'full address' data for each business.
 ** ZIP codes
-#+BEGIN_SRC R :session :exports none :results none
+#+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
   grab_zip <- function(address) {
       as.numeric(substr(address,
                         nchar(address, keepNA = TRUE) - 4,
@@ -151,7 +151,7 @@ they can be extracted from from the 'full address' data for each business.
 #+END_SRC
 How many ZIPs did we get? Dang, turns out that only about 1/8 of the addresses
 contain a retreivable zip code.
-#+BEGIN_SRC R :session :exports none :results org
+#+BEGIN_SRC R :session :exports none :results org :tangle ./yelp.r
 percent_null_zips <- length(zips[is.na(zips)])/length(zips)*100
 
 sprintf("%.2f%% of restaurants have undecipherable zip codes", percent_null_zips)
@@ -167,7 +167,7 @@ very good address information, and in fact, many do not provide any at
 all. Luckily, Yelp maintains longitude/latitude coordinates of each business for
 the purpose of Google maps integration, which we can confidently affirm with the
 following assertion:
-#+BEGIN_SRC R :session :exports both :results org
+#+BEGIN_SRC R :session :exports both :results org :tangle ./yelp.r
    longs <- grep('[[:digit:]]+.[[:digit:]]*', business$longitude)
    lats <- grep('[[:digit:]]+.[[:digit:]]*', business$latitude)
    stopifnot(length(longs) == length(lats),
@@ -187,7 +187,7 @@ using restaurant price range, and not restaurant neighborhood median income (or
 the like), as a feauture of interest.  It may be fun to at some point put in the
 work/money to produce the zip code information.
 ** Additional categories and misc data cleaning :ignore:
-#+BEGIN_SRC R :session :exports none :results  none
+#+BEGIN_SRC R :session :exports none :results  none :tangle ./yelp.r
   business <- merge(business, 
                     rename(aggregate(stars ~ business_id,
                                      data=reviews,
@@ -202,7 +202,7 @@ work/money to produce the zip code information.
 #+END_SRC
 * Distribution
 ** Inconsistency of ratings
- #+BEGIN_SRC R :session :exports code :results none :cache no
+ #+BEGIN_SRC R :session :exports code :results none :cache no :tangle ./yelp.r
    star_variance <- merge(aggregate(stars ~ business_id,
                                     data = reviews, 
                                     FUN = var),
@@ -218,7 +218,7 @@ work/money to produce the zip code information.
    variance to get an idea about how restaurant pricing correlates with reviewer
    consistency:
    #+NAME: star_var
-   #+BEGIN_SRC R :session :exports both :colnames yes
+   #+BEGIN_SRC R :session :exports both :colnames yes :tangle ./yelp.r
      aggregate(stars.var ~ price.range, data = star_variance, FUN = mean)
    #+END_SRC
 
@@ -235,7 +235,7 @@ work/money to produce the zip code information.
    rating average:
 
    #+NAME: variance_vs_rating
-   #+BEGIN_SRC R :session :exports code :results org
+   #+BEGIN_SRC R :session :exports code :results org :tangle ./yelp.r
      cor(star_variance$stars.var, star_variance$stars.avg, use='complete')
    #+END_SRC
 
@@ -244,7 +244,7 @@ work/money to produce the zip code information.
    -0.447323849535184
    #+END_SRC
 
-   #+BEGIN_SRC R :session :exports results :results org :var x=variance_vs_rating
+   #+BEGIN_SRC R :session :exports results :results org :var x=variance_vs_rating :tangle ./yelp.r
      sprintf("Correlation between rating variance and rating average: %.2f", 
              as.numeric(x))
    #+END_SRC
@@ -260,7 +260,7 @@ work/money to produce the zip code information.
    and one-star vote rates for all businesses:
 
   #+NAME: star-dists
-  #+BEGIN_SRC R :session :exports none :results silenced :cache no
+  #+BEGIN_SRC R :session :exports none :results silenced :cache no :tangle ./yelp.r
     star_freq<- function(r, rating) {
         sum(r == rating)/length(r)
     }
@@ -299,7 +299,7 @@ work/money to produce the zip code information.
   #+RESULTS[7bad3f915b246f2b57ed46b5f016196973dc16ff]: star-dists
 
   #+NAME: basic-star-var-graph
-  #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_LfYln761.png 
+  #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_LfYln761.png  :tangle ./yelp.r
     library(scales)
     r <- filter(business, review_count > 100)
     ggplot(r, aes(x=one, y=five, color = price.range)) +
@@ -316,7 +316,7 @@ work/money to produce the zip code information.
   #+RESULTS: basic-star-var-graph
   [[file:./img/R_LfYln761.png]]
 
-  #+BEGIN_SRC R :session :exports none :results output org 
+  #+BEGIN_SRC R :session :exports none :results output org  :tangle ./yelp.r
     g1 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 1)), one=stars)
     g2 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 2)), two=stars)
     g3 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 3)), three=stars)
@@ -326,7 +326,7 @@ work/money to produce the zip code information.
     business <- merge(business, Reduce(merge,list(g1, g2, g3, g4, g5)), by="business_id")
   #+END_SRC
 
-  #+BEGIN_SRC R :session :exports both :results output org 
+  #+BEGIN_SRC R :session :exports both :results output org  :tangle ./yelp.r
     star_freq<- function(rs) {   
         tabulate(rs)/length(rs)
     }
@@ -350,7 +350,7 @@ work/money to produce the zip code information.
    mean restaurant rating distribution. Note that we limit ourselves to those
    businesses with at least 20 reviews:
 
-   #+BEGIN_SRC R :session :exports results :results graphics :file ./img/R_CCa0S6lS.png 
+   #+BEGIN_SRC R :session :exports results :results graphics :file ./img/R_CCa0S6lS.png  :tangle ./yelp.r
      b <- filter(business, review_count > 20)
      g <- ggplot(data=b, aes(stars.avg))
      g + geom_histogram(breaks=seq(1,5,by=.10),
@@ -384,7 +384,7 @@ work/money to produce the zip code information.
     reason for this lack of correlation is because this is indeed a naive
     assumption:
 
-#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_Sr5sdYpc.png 
+#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_Sr5sdYpc.png  :tangle ./yelp.r
   ggplot(business, aes(x=price.range, y=stars.avg, fill=price.range)) + 
       geom_boxplot() + 
       stat_summary(fun.y="mean", geom="point") + 
@@ -412,7 +412,7 @@ am most naturally inclined.
 ** Price distribution
 The pricing makeup of our positively skewed restaurant rating distribution is
 not particularly surprising:
-#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_YzrIrkYy.png 
+#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_YzrIrkYy.png  :tangle ./yelp.r
   # priced restaurants only
   ggplot(business[!is.na(business$price.range), ],
          aes(x=stars.avg, fill=price.range)) + geom_histogram(binwidth=.25) +
@@ -428,7 +428,7 @@ not particularly surprising:
 Interestingly, it seems that unpriced restaurants, i.e. restaurants for which a
 price range has not yet been assigned via user concensus, are, however, not only
 considerably more positively rated, but also in a seemingly linear fashion:
-#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_vvM4L9Z2.png 
+#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_vvM4L9Z2.png  :tangle ./yelp.r
   b <- business[business$review_count > 20, ]
   ggplot(b[is.na(b$price.range),], aes(x=stars.avg)) +
       geom_histogram(binwidth=.10, color='orange', fill='orange') +
@@ -450,7 +450,7 @@ suspicious.
 ** TODO Sample businesses by first 20 or so reviews (chronologically)
 - See if they have a similar distribution to this rating average stuff
 ** REST
-#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_3EqwcmXp.png 
+#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_3EqwcmXp.png  :tangle ./yelp.r
 s <- star_variance[star_variance$review_count > 20, ]
 ggplot(s, aes(x=stars.var)) + geom_histogram(color='red', fill='red', binwidth=.1)
 #+END_SRC
@@ -458,7 +458,7 @@ ggplot(s, aes(x=stars.var)) + geom_histogram(color='red', fill='red', binwidth=.
 #+RESULTS:
 [[file:./img/R_3EqwcmXp.png]]
 
-#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_wGL1DyI7.png 
+#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_wGL1DyI7.png  :tangle ./yelp.r
   s <- star_variance[star_variance$review_count > 100, ]
   ggplot(s, aes(x=stars.var, y=review_count)) + geom_point()
 #+END_SRC
@@ -467,7 +467,7 @@ ggplot(s, aes(x=stars.var)) + geom_histogram(color='red', fill='red', binwidth=.
 [[file:./img/R_wGL1DyI7.png]]
 
 *** Basic stuff
- #+BEGIN_SRC R :session :exports results :results org
+ #+BEGIN_SRC R :session :exports results :results org :tangle ./yelp.r
    sprintf("Average rating across all reviews: %.3f", mean(reviews$stars))
  #+END_SRC
 
@@ -478,7 +478,7 @@ ggplot(s, aes(x=stars.var)) + geom_histogram(color='red', fill='red', binwidth=.
 
 * BIN
 We can see the law of large numbers in action
-#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_vQgMpNec.png 
+#+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_vQgMpNec.png  :tangle ./yelp.r
   s <- sample_n(filter(star_variance, review_count > 30 ), 16000)
   ggplot(filter(s, as.numeric(s$price.range) == 1), aes(x=review_count, y=stars.var)) + 
       geom_point() + 
