@@ -4,232 +4,231 @@
 #+TITLE: Sensibility of Yelp Rating Trends
 
 * Core   :noexport:
-[[http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/][multiplot function]]
-#+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
-  # Multiple plot function
-  #
-  # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
-  # - cols:   Number of columns in layout
-  # - layout: A matrix specifying the layout. If present, 'cols' is ignored.
-  #
-  # If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
-  # then plot 1 will go in the upper left, 2 will go in the upper right, and
-  # 3 will go all the way across the bottom.
-  #
-  multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-    library(grid)
+  [[http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/][multiplot function]]
+  #+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
+                                            # Multiple plot function
+                                            #
+                                            # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+                                            # - cols:   Number of columns in layout
+                                            # - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+                                            #
+                                            # If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+                                            # then plot 1 will go in the upper left, 2 will go in the upper right, and
+                                            # 3 will go all the way across the bottom.
+                                            #
+    multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+        library(grid)
 
-    # Make a list from the ... arguments and plotlist
-    plots <- c(list(...), plotlist)
+                                            # Make a list from the ... arguments and plotlist
+        plots <- c(list(...), plotlist)
 
-    numPlots = length(plots)
+        numPlots = length(plots)
 
-    # If layout is NULL, then use 'cols' to determine layout
-    if (is.null(layout)) {
-      # Make the panel
-      # ncol: Number of columns of plots
-      # nrow: Number of rows needed, calculated from # of cols
-        layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                         ncol = cols, nrow = ceiling(numPlots/cols))
+                                            # If layout is NULL, then use 'cols' to determine layout
+        if (is.null(layout)) {
+                                            # Make the panel
+                                            # ncol: Number of columns of plots
+                                            # nrow: Number of rows needed, calculated from # of cols
+            layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                             ncol = cols, nrow = ceiling(numPlots/cols))
+        }
+
+        if (numPlots==1) {
+            print(plots[[1]])
+
+        } else {
+                                            # Set up the page
+            grid.newpage()
+            pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+                                            # Make each plot, in the correct location
+            for (i in 1:numPlots) {
+                                            # Get the i,j matrix positions of the regions that contain this subplot
+                matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+                print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                                layout.pos.col = matchidx$col))
+            }
+        }
     }
-
-   if (numPlots==1) {
-      print(plots[[1]])
-
-    } else {
-      # Set up the page
-      grid.newpage()
-      pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-
-      # Make each plot, in the correct location
-      for (i in 1:numPlots) {
-        # Get the i,j matrix positions of the regions that contain this subplot
-        matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-
-        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                        layout.pos.col = matchidx$col))
-      }
-    }
-  }
-#+END_SRC
+  #+END_SRC
 
 * Introduction
-The ubiquity of user review services is a modern phenomenon, being perhaps one
-of the most obvious and profoundly popular uses of the internet. Do you need to
-know the general opinion about something? Google it. Google an interesting pair
-of headphones to read its Amazon reviews, google the new Marvel movie to get
-movie-goer reviews from IMDb, google the neighborhood restaurant to peruse its
-Yelp reviews. Yelp reviewership is the subject of this blog post, and in
-particular, a look at how reviewers tend to disbalance their rating
-standards. This endeavor begins by taking a look at rating consistency by
-context; the entry point being an investigation into the suspicion that
-restaurants in less affluent neighborhoods tend to have higher rating sdiance
-than those in more affluent neighborhoods.
+
+  The ubiquity of user review services is a modern phenomenon, being perhaps one
+  of the most obvious and profoundly popular uses of the internet. Do you need to
+  know the general opinion about something? Google it. Google an interesting pair
+  of headphones to read its Amazon reviews, google the new Marvel movie to get
+  movie-goer reviews from IMDb, google the neighborhood restaurant to peruse its
+  Yelp reviews. Yelp reviewership is the subject of this blog post, and in
+  particular, a look at how reviewers tend to disbalance their rating
+  standards. This endeavor begins by taking a look at rating consistency by
+  context; the entry point being an investigation into the suspicion that
+  restaurants in less affluent neighborhoods tend to have higher rating sdiance
+  than those in more affluent neighborhoods.
+
 * Methodology
 
-This analysis uses the Yelp academic dataset, which consists of about 2.6
-million user reviews, plus some relevant category data (~85k businesses, ~700k
-users, etc). This data is stored natively in json, though the data is quite
-flat, even more so one discounts some of the less useful bits of
-information. Therefore the json was trimmed and converted to a csv format via a
-python script, and the resulting csv files, uncompressed, total ~2 gigabytes on
-disk. R is the language of choice for the analysis, with the data.table often
-coming in handy for its speed.
+  This analysis uses the Yelp academic dataset, which consists of about 2.6
+  million user reviews, plus some relevant category data (~85k businesses, ~700k
+  users, etc). This data is stored natively in json, though the data is quite
+  flat, even more so when one discounts some of the less useful bits of
+  information. Therefore the json was trimmed and converted to a csv format via a
+  python script, and the resulting csv files, uncompressed, total ~2 gigabytes on
+  disk. R is the language of choice for the analysis, with the ~data.table~ often
+  coming in handy for its greate speed improvement over R-base's features.
 
-* Initializing data 
+* Initializing data
 
-  Data has been preprocessed by a small Python script that flattens the source
+  Data has been preprocessed by a small [[./preprocess.py][Python script]] that flattens the source
   json into csv and trims off useless data.
 
 ** Libraries :noexport:
 
-Necessary libraries: 
+   Load unnecessary libraries: 
 
-#+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
-  library(ggplot2)
-  library(data.table)
-  library(dplyr)
-  library(ascii)
-  options(asciiType = "org")
-  options(max.print = 200)
-#+END_SRC
+   #+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
+     library(ggplot2)
+     library(data.table)
+     library(dplyr)
+     library(ascii)
+     options(asciiType = "org")
+     options(max.print = 200)
+   #+END_SRC
 
 ** Data :ignore:
 
-Need to load up about 2.3 gigabytes of tabular data and keep track of read
-time. Thankfully ~fread~ from the the ~data.table~ package makes this process an
-order of magnitude or two faster than R Base's ~read.csv~:
+ Loading about 2.3 gigabytes of tabular data and keep track of read
+ time. Thankfully ~fread~ from the the ~data.table~ package makes this process an
+ order of magnitude or two faster than R Base's ~read.csv~:
 
-#+BEGIN_SRC R :session :exports none :cache no :tangle ./yelp.r
-  read_table <- function(filename) {                                          
-      table <- fread(filename)  # use fread to quickly read csv file
-      # Make sure there ren't any unacceptable chracters in the column names
-      names(table) <- make.names(tolower(names(table)), unique = TRUE)
-      table
-  }
+   #+BEGIN_SRC R :session :exports none :cache no :tangle ./yelp.r
+     read_table <- function(filename) {                                          
+         table <- fread(filename)  # use fread to quickly read csv file
+                                             # Make sure there ren't any unacceptable chracters in the column names
+         names(table) <- make.names(tolower(names(table)), unique = TRUE)
+         table
+     }
 
-  print("Loading reviews...")
-  reviews_t = system.time(reviews <- read_table('./data/review.csv'))
+     print("Loading reviews...")
+     reviews_t = system.time(reviews <- read_table('./data/review.csv'))
 
-  print("Loading tip...")
-  tips_t = system.time(tips <- read_table("./data/tip.csv"))
+     print("Loading tip...")
+     tips_t = system.time(tips <- read_table("./data/tip.csv"))
 
-  print("Loading business...")
-  business_t = system.time(business <- read_table("./data/business.csv"))
+     print("Loading business...")
+     business_t = system.time(business <- read_table("./data/business.csv"))
 
-  print("Loading user...")
-  users_t = system.time(users <- read_table("./data/user.csv"))
+     print("Loading user...")
+     users_t = system.time(users <- read_table("./data/user.csv"))
 
-  print("Loading checkin...")
-  checkins_t = system.time(checkins <- read_table("./data/checkin.csv"))
-#+END_SRC
+     print("Loading checkin...")
+     checkins_t = system.time(checkins <- read_table("./data/checkin.csv"))
+   #+END_SRC
 
-#+RESULTS[a89ba1709758873becea8679fe72f2880558629e]:
+   #+RESULTS[a89ba1709758873becea8679fe72f2880558629e]:
 
-#+BEGIN_SRC R :session :exports results :results org :tangle ./yelp.r
-  total_load_time <- reviews_t + tips_t + business_t + users_t + checkins_t
-  sprintf("Time to load CSV data into data.frames: %.2f minutes", total_load_time["elapsed"]/60.0)
-#+END_SRC
+   #+BEGIN_SRC R :session :exports results :results org :tangle ./yelp.r
+     total_load_time <- reviews_t + tips_t + business_t + users_t + checkins_t
+     sprintf("Time to load CSV data into data.frames: %.2f minutes", total_load_time["elapsed"]/60.0)
+   #+END_SRC
 
-#+RESULTS:
-#+BEGIN_SRC org
-Time to load CSV data into data.frames: 0.35 minutes
-#+END_SRC
+   #+RESULTS:
+   #+BEGIN_SRC org
+     Time to load CSV data into data.frames: 0.73 minutes
+   #+END_SRC
 
 * Preprocessing
+** Additional categories and misc data cleaning :noexport:
 
-Zip code info for each business would be quite helpful for looking into the
-demographical review trends. However, ZIP code info is not explicitly
-required of businesses when registering with Yelp, so we have to see how easily
-they can be extracted from from the 'full address' data for each business.
-
+   #+BEGIN_SRC R :session :exports none :results  none :tangle ./yelp.r
+     business <- merge(business, 
+                      rename(aggregate(stars ~ business_id,
+                                       data=reviews,
+                                       FUN=mean), 
+                             stars.avg = stars),
+                      by='business_id')
+     business <- rename(business, stars.median = stars) # for pleasant merges with `reviews`
+     business$price.range <- factor(business$price.range, labels=c('Low',
+                                                                  'Medium Low', 
+                                                                  'Medium High',
+                                                                  'High'))
+   #+END_SRC
+  
 ** ZIP codes
 
-#+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
-  grab_zip <- function(address) {
-      as.numeric(substr(address,
-                        nchar(address, keepNA = TRUE) - 4,
-                        nchar(address, keepNA = TRUE)))
-  }
+   #+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
+     grab_zip <- function(address) {
+         as.numeric(substr(address,
+                           nchar(address, keepNA = TRUE) - 4,
+                           nchar(address, keepNA = TRUE)))
+     }
 
-  zips = lapply(business$full_address, grab_zip)
+     zips = lapply(business$full_address, grab_zip)
 
-  business <- mutate(business, zip_codes = zips)
-#+END_SRC
+     business <- mutate(business, zip_codes = zips)
+   #+END_SRC
 
-How many ZIPs did we get? Dang, turns out that only about 1/8 of the addresses
-contain a retreivable zip code.
+   How many ZIPs did we get? Dang, turns out that only about 1/8 of the addresses
+   contain a retreivable zip code.
 
-#+BEGIN_SRC R :session :exports none :results org :tangle ./yelp.r
-percent_null_zips <- length(zips[is.na(zips)])/length(zips)*100
+   #+BEGIN_SRC R :session :exports none :results org :tangle ./yelp.r
+     percent_null_zips <- length(zips[is.na(zips)])/length(zips)*100
 
-sprintf("%.2f%% of restaurants have undecipherable zip codes", percent_null_zips)
-#+END_SRC
+     sprintf("%.2f%% of restaurants have undecipherable zip codes", percent_null_zips)
+   #+END_SRC
 
-#+RESULTS:
-#+BEGIN_SRC org
-12.95% of restaurants have undecipherable zip codes
-#+END_SRC
+   #+RESULTS:
+   #+BEGIN_SRC org
+     12.95% of restaurants have undecipherable zip codes
+   #+END_SRC
 
-Upon closer inspection, it turns out that generally businesses do not provide
-very good address information, and in fact, many do not provide any at
-all. Luckily, Yelp maintains longitude/latitude coordinates of each business for
-the purpose of Google maps integration, which we can confidently affirm with the
-following assertion:
+   Upon closer inspection, it also turns out that generally businesses do not provide
+   very good address information, and in fact, many do not provide any at
+   all. Luckily, Yelp maintains longitude/latitude coordinates of each business for
+   the purpose of Google maps integration, which we can confidently affirm with the
+   following assertion:
 
-#+BEGIN_SRC R :session :exports both :results org :tangle ./yelp.r
-   longs <- grep('[[:digit:]]+.[[:digit:]]*', business$longitude)
-   lats <- grep('[[:digit:]]+.[[:digit:]]*', business$latitude)
-   stopifnot(length(longs) == length(lats),
-             length(longs) == length(business$latitude))
-   print("Done.")
-#+END_SRC
+   #+BEGIN_SRC R :session :exports both :results org :tangle ./yelp.r
+     longs <- grep('[[:digit:]]+.[[:digit:]]*', business$longitude)
+     lats <- grep('[[:digit:]]+.[[:digit:]]*', business$latitude)
+     stopifnot(length(longs) == length(lats),
+               length(longs) == length(business$latitude))
+     print("Done.")
+   #+END_SRC
 
-#+RESULTS:
-#+BEGIN_SRC org
-Done.
-#+END_SRC
+   #+RESULTS:
+   #+BEGIN_SRC org
+     Done.
+   #+END_SRC
 
-While geographical coordinates are readily at hand, it turns out that reverse
-geocoding, the process of converting geographic coordinates to zip codes or the
-like, costs money and is time consuming to do accurately. Instead, it could be
-useful to get an idea of the quality of the rating inconsistency by instead
-using restaurant price range, and not restaurant neighborhood median income (or
-the like), as a feauture of interest.  It may be fun to at some point put in the
-work/money to produce the zip code information.
-
-** Additional categories and misc data cleaning :ignore:
-
-#+BEGIN_SRC R :session :exports none :results  none :tangle ./yelp.r
-  business <- merge(business, 
-                    rename(aggregate(stars ~ business_id,
-                                     data=reviews,
-                                     FUN=mean), 
-                           stars.avg = stars),
-                    by='business_id')
-  business <- rename(business, stars.median = stars) # for pleasant merges with `reviews`
-  business$price.range <- factor(business$price.range, labels=c('Low',
-                                                                'Medium Low', 
-                                                                'Medium High',
-                                                                'High'))
-#+END_SRC
+   While geographical coordinates are readily at hand, unfortunately reverse
+   geocoding, the process of converting geographic coordinates to zip codes or
+   the like, costs money and is time consuming to do accurately. Instead, it
+   could be useful to get an idea of the quality of the rating inconsistency by
+   instead using restaurant price range, denoted with field name ~price.range~,
+   and not restaurant neighborhood median income (or the like), as a feauture of
+   interest. It may be fun to at some point put in the work/money to produce
+   the zip code information.
 
 * Analysis
-** Inconsistency of ratings
 
- #+BEGIN_SRC R :session :exports code :results none :cache no :tangle ./yelp.r
-   star_sd <- merge(aggregate(stars ~ business_id,
-                              data = reviews, 
-                              FUN = sd),
-                          na.omit(business[,c('price.range',
-                                              'stars.avg',
-                                              'business_id',
-                                              'review_count')]),
-                          by = 'business_id')
-   star_sd <- rename(star_sd, stars.sd = stars)
- #+END_SRC
+A good place to start might be to check out the standard deviation of these
+ratings, and get a feel about how they correlate with business expensiveness.
 
-*** ~stars.sd~ ~ ~price.range~
+** ~stars.sd~ in terms of  ~price.range~
+
+  #+BEGIN_SRC R :session :exports code :results none :cache no :tangle ./yelp.r
+    star_sd <- merge(aggregate(stars ~ business_id,
+                               data = reviews, 
+                               FUN = sd),
+                     na.omit(business[,c('price.range',
+                                         'stars.avg',
+                                         'business_id',
+                                         'review_count')]),
+                     by = 'business_id')
+    star_sd <- rename(star_sd, stars.sd = stars)
+  #+END_SRC
 
    We can aggregate the businesses by price range and average out their rating
    standard deviation to get an idea about how restaurant pricing correlates with reviewer
@@ -249,11 +248,11 @@ work/money to produce the zip code information.
    | High        | 1.22361228286889 |
 
    It seems that the correlation between rating inconsistency and restaurant
-   expensiveness is very small. This is strange, because you might expect a
+   expensiveness is neglibile. This is strange, because you might expect a
    strong correlation between price range and mean rating, and because mean is
    used to derive standard deviation, therefore a measureable correlation
-   between price range and standard deviation. We can demonstrate this with the
-   following code:
+   between price range and standard deviation. We can demonstrate this expected
+   relationship visually with the following code:
 
    #+NAME: sd_vs_rating
    #+BEGIN_SRC R :session :exports code :results org :tangle ./yelp.r
@@ -262,7 +261,7 @@ work/money to produce the zip code information.
 
    #+RESULTS: sd_vs_rating
    #+BEGIN_SRC org
-   -0.495482428812402
+     -0.495482428812402
    #+END_SRC
 
    #+BEGIN_SRC R :session :exports results :results org :var x=sd_vs_rating :tangle ./yelp.r
@@ -272,35 +271,39 @@ work/money to produce the zip code information.
 
    #+RESULTS:
    #+BEGIN_SRC org
-   Correlation between rating sd and rating average: -0.50
+     Correlation between rating sd and rating average: -0.50
    #+END_SRC
 
-#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_pajeSToS.png 
-  ggplot(star_sd[star_sd$review_count > 75,], aes(x = stars.avg, y = stars.sd, color = "green")) +
-      geom_point() +
-      guides(color = FALSE) +
-      labs(title = "Rating mean vs rating standard deviation for businesses w/ > 75 reviews",
-           y = "Standard Deviation",
-           x = "Rating Mean")
-#+END_SRC
+** ~stars.avg~ distribution
 
-#+RESULTS:
-[[file:./img/R_pajeSToS.png]]
+   So, we see that the standard deviation of rating for restaurants correlates
+   negatively with their mean. That is, poorly rated restaurants have a tendency
+   to also have more varied ratings. A possible conclusion is that restaurant
+   ratings are simply skewed positively, and therefore deviation from mean
+   rating is more often bounded at 5 stars than at 1 star (4 star restaurants
+   will get occaisional 2-star ratings, but of course never a 6-star rating). A
+   visualization of this weightedness might be helpful (note, only businesses
+   with > 40 reviews are featured in the plot):
 
-*** ~stars.avg~ distribution
+   #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_pajeSToS.png 
+     ggplot(star_sd[star_sd$review_count > 40,], aes(x = stars.avg, y = stars.sd, color = "green")) +
+         geom_point() +
+         guides(color = FALSE) +
+         labs(title = "Rating mean vs rating standard deviation for businesses w/ > 40 reviews",
+              y = "Standard Deviation",
+              x = "Rating Mean")
+   #+END_SRC
 
-So, we see that the rating  for restaurants correlates negatively
-with their average ratings. That is, poorly rated restaurants have a tendency
-to also have more sdied ratings. A possible conclusion is that restaurant
-ratings are simply skewed positively, and therefore deviation from mean
-rating is more often bounded at 5 stars than at 1 star (4 star restaurants
-will get occaisional 2-star ratings, but of course never a 6-star rating). We
-can investigate this idea with the following histographic depicting of the
-mean restaurant rating distribution. Note that we limit ourselves to those
-businesses with at least 20 reviews:
+   #+RESULTS:
+   [[file:./img/R_pajeSToS.png]]
+
+   In fact, this suggests explicitly the aforementioned positive skew. We can
+   investigate the idea further with the following histograph depicting the
+   mean restaurant rating distribution. Note that we limit ourselves to those
+   businesses with at least 20 reviews:
 
    #+BEGIN_SRC R :session :exports results :results graphics :file ./img/R_CCa0S6lS.png  :tangle ./yelp.r
-     b <- filter(business, review_count > 20)
+     b <- filter(business, review_count > 40)
      g <- ggplot(data=b, aes(stars.avg))
      g + geom_histogram(breaks=seq(1,5,by=.10),
                         fill="red",
@@ -311,156 +314,156 @@ businesses with at least 20 reviews:
               y = "Count")
    #+END_SRC
 
-#+RESULTS:
-[[file:./img/R_CCa0S6lS.png]]
+   #+RESULTS:
+   [[file:./img/R_CCa0S6lS.png]]
     
-Above we see that the average restaurant rating shows significant positive
-skew, and therefore the first hypothesis seems a bit more be believable. Most
-people who have experience with the internet, and therefore have some
-familiarity with online rating systems like Yelp, probably have an intuitive
-idea about this tendency for these ratings systems to have a very strong
-positive skew. I suspect a major reason for this is perceived social pressure,
-particularly in the case of a Facebook-driven website such as Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is
-not a unique idea]]). For reference, the mean business rating is a rather high
-src_R[:session]{sprintf("%.2f", mean(business$stars.avg))} {{{results(=3.69=)}}} stars.
+   Above we see that the average restaurant rating shows significant positive
+   skew, and therefore the first hypothesis seems a bit more be believable. Most
+   people who have experience with the internet, and therefore have some
+   familiarity with online rating systems like Yelp, probably have an intuitive
+   idea about this tendency for these ratings systems to have a very strong
+   positive skew. I suspect a major reason for this is perceived social pressure,
+   particularly in the case of a Facebook-driven website such as Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is
+   not a unique idea]]). For reference, the mean business rating is a rather high
+   src_R[:session]{sprintf("%.2f", mean(business$stars.avg))} {{{results(=3.69=)}}} stars.
 
-*** ~stars.avg~ ~ ~price.range~                                        :ignore:
+** ~stars.avg~ ~ ~price.range~                                           :ignore:
 
-In any case, we might still wonder why there exists this correlation between
-rating inconsistency and average rating, yet also no such correlation
-whatsoever between rating inconsistency and restaurant expensiveness,
-statements which we might expect, possibly naively, to be quite similar
-(i.e., more expensive restaurants are generally rated more highly). The
-reason for this lack of correlation is because this is indeed a naive
-assumption:
+   In any case, we might still wonder why there exists this correlation between
+   rating inconsistency and average rating, yet also no such correlation
+   whatsoever between rating inconsistency and restaurant expensiveness,
+   statements which we might expect, possibly naively, to be quite similar
+   (i.e., more expensive restaurants are generally rated more highly). The
+   reason for this lack of correlation is because this is indeed a naive
+   assumption:
 
-#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_Sr5sdYpc.png  :tangle ./yelp.r
-  ggplot(business, aes(x=price.range, y=stars.avg, fill=price.range)) + 
-      geom_boxplot() + 
-      stat_summary(fun.y="mean", geom="point") + 
-      labs(x = "Price Range",
-           y = "Rating average",
-           title = "Rating distribution by price ranges")
-#+END_SRC
+   #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_Sr5sdYpc.png  :tangle ./yelp.r
+     ggplot(business, aes(x=price.range, y=stars.avg, fill=price.range)) + 
+         geom_boxplot() + 
+         stat_summary(fun.y="mean", geom="point") + 
+         labs(x = "Price Range",
+              y = "Rating average",
+              title = "Rating distribution by price ranges")
+   #+END_SRC
 
-#+RESULTS:
-[[file:./img/R_Sr5sdYpc.png]]
+   #+RESULTS:
+   [[file:./img/R_Sr5sdYpc.png]]
 
-I suspect an explanation for this indescrepency is simply that the value to
-which these ratings refer is not very well in line with what we, as consumers,
-intuitively and automatically summarize them to mean. So, while as a consumer we
-think of these ratings, without much actual precise consideration, as a general
-measure of "goodness", with zero being un-good and five being very good, as
-reviewers we (the collective "we") are likely to make all of the considerations
-required for an accurate evaluation (e.g., average restaurant goodness, pricing,
-etc). Indeed, it might be more accurate to describe my own system as how little
-my satisfaction with the restaurant deviated from my expected experience. In this
-way, I've normalized my perspective on the restaurant, but without actually
-yielding me any bang-for-the-buck measure. I consider this a bad and unhelpful
-way to contribute my opinion on the business, but this is the way that I feel I
-am most naturally inclined.
+   I suspect an explanation for this indescrepency is simply that the value to
+   which these ratings refer is not very well in line with what we, as consumers,
+   intuitively and automatically summarize them to mean. So, while as a consumer we
+   think of these ratings, without much actual precise consideration, as a general
+   measure of "goodness", with zero being un-good and five being very good, as
+   reviewers we (the collective "we") are likely to make all of the considerations
+   required for an accurate evaluation (e.g., average restaurant goodness, pricing,
+   etc). Indeed, it might be more accurate to describe my own system as how little
+   my satisfaction with the restaurant deviated from my expected experience. In this
+   way, I've normalized my perspective on the restaurant, but without actually
+   yielding me any bang-for-the-buck measure. I consider this a bad and unhelpful
+   way to contribute my opinion on the business, but this is the way that I feel I
+   am most naturally inclined.
 
-*** Central tendency
+** Central tendency
 
    So we've gotten a bit far at this point from the original idea of the effect
    of neighborhood demographics on rating consistency, but this might still be
    something worth exploring. We can look at the relationship between five-star
    and one-star vote rates for all businesses:
 
-  #+NAME: star-dists
-  #+BEGIN_SRC R :session :exports none :results silenced :cache no :tangle ./yelp.r
-    rating_freq <- function(r, rating) {
-        sum(r == rating)/length(r)
-    }
-    # There is definitely a nicer way to do this, but I'm done with that 
-    # rabbit hole.
-    s1 <- rename(aggregate(stars ~ business_id,
-                           data=reviews,
-                           FUN=function(stars) rating_freq(stars, 1)),
-                 one=stars)
+   #+NAME: star-dists
+   #+BEGIN_SRC R :session :exports none :results silenced :cache no :tangle ./yelp.r
+     rating_freq <- function(r, rating) {
+         sum(r == rating)/length(r)
+     }
+                                             # There is definitely a nicer way to do this, but I'm done with that 
+                                             # rabbit hole.
+     s1 <- rename(aggregate(stars ~ business_id,
+                            data=reviews,
+                            FUN=function(stars) rating_freq(stars, 1)),
+                  one=stars)
 
-    s2 <- rename(aggregate(stars ~ business_id,
-                           data=reviews,
-                           FUN=function(stars) rating_freq(stars, 2)),
-                 two=stars)
+     s2 <- rename(aggregate(stars ~ business_id,
+                            data=reviews,
+                            FUN=function(stars) rating_freq(stars, 2)),
+                  two=stars)
 
-    s3 <- rename(aggregate(stars ~ business_id,
-                           data=reviews,
-                           FUN=function(stars) rating_freq(stars, 3)),
-                 three=stars)
+     s3 <- rename(aggregate(stars ~ business_id,
+                            data=reviews,
+                            FUN=function(stars) rating_freq(stars, 3)),
+                  three=stars)
 
-    s4 <- rename(aggregate(stars ~ business_id,
-                           data=reviews,
-                           FUN=function(stars) rating_freq(stars, 4)),
-                 four=stars)
+     s4 <- rename(aggregate(stars ~ business_id,
+                            data=reviews,
+                            FUN=function(stars) rating_freq(stars, 4)),
+                  four=stars)
 
-    s5 <- rename(aggregate(stars ~ business_id,
-                           data=reviews,
-                           FUN=function(stars) rating_freq(stars, 5)),
-                 five=stars)
+     s5 <- rename(aggregate(stars ~ business_id,
+                            data=reviews,
+                            FUN=function(stars) rating_freq(stars, 5)),
+                  five=stars)
 
 
-    business <- merge(business, Reduce(merge,list(s1, s2, s3, s4, s5)),
-                      by="business_id")
-  #+END_SRC
+     business <- merge(business, Reduce(merge,list(s1, s2, s3, s4, s5)),
+                       by="business_id")
+   #+END_SRC
 
-  #+RESULTS[7bad3f915b246f2b57ed46b5f016196973dc16ff]: star-dists
+   #+RESULTS[7bad3f915b246f2b57ed46b5f016196973dc16ff]: star-dists
 
-  #+NAME: basic-star-sd-graph
-  #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_LfYln761.png  :tangle ./yelp.r
-    library(scales)
-    r <- filter(business, review_count > 100)
-    ggplot(r, aes(x=one, y=five, color="orange")) +
-        geom_point() +
-        scale_x_continuous(labels = percent) +
-        scale_y_continuous(labels = percent) + 
-        labs(color = "Business Price Range", 
-             x = ("One star"),
-             y = ("Five star"), 
-             title="Rating composition: five-star vs one-star") 
-  #+END_SRC
+   #+NAME: basic-star-sd-graph
+   #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_LfYln761.png  :tangle ./yelp.r
+     library(scales)
+     r <- filter(business, review_count > 100)
+     ggplot(r, aes(x=one, y=five, color="orange")) +
+         geom_point() +
+         scale_x_continuous(labels = percent) +
+         scale_y_continuous(labels = percent) + 
+         labs(color = "Business Price Range", 
+              x = ("One star"),
+              y = ("Five star"), 
+              title="Rating composition: five-star vs one-star") 
+   #+END_SRC
 
-  #+RESULTS: basic-star-sd-graph
-  [[file:./img/R_LfYln761.png]]
+   #+RESULTS: basic-star-sd-graph
+   [[file:./img/R_LfYln761.png]]
 
-*** Price distribution
+** Price distribution
 
- The pricing makeup of our positively skewed restaurant rating distribution is
- not particularly surprising:
+   The pricing makeup of our positively skewed restaurant rating distribution is
+   not particularly surprising:
 
- #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_YzrIrkYy.png  :tangle ./yelp.r
-   # priced restaurants only
-   ggplot(business[!is.na(business$price.range), ],
-          aes(x=stars.avg, fill=price.range)) + geom_histogram(binwidth=.25) +
-          ylab('Count') +
-          xlab('Rating average (mean)') +
-          labs(fill="Price Range") +
-          ggtitle('Distribution of ratings by business price range')
- #+END_SRC
+   #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_YzrIrkYy.png  :tangle ./yelp.r
+  # priced restaurants only
+  ggplot(business[!is.na(business$price.range), ],
+         aes(x=stars.avg, fill=price.range)) + geom_histogram(binwidth=.25) +
+         ylab('Count') +
+         xlab('Rating average (mean)') +
+         labs(fill="Price Range") +
+         ggtitle('Distribution of ratings by business price range')
+#+END_SRC
 
- #+RESULTS:
- [[file:./img/R_YzrIrkYy.png]]
+#+RESULTS:
+[[file:./img/R_YzrIrkYy.png]]
 
- Interestingly, it seems that unpriced restaurants, i.e. restaurants for which a
- price range has not yet been assigned via user concensus, are, however, not only
- considerably more positively rated, but also in a seemingly linear fashion:
+Interestingly, it seems that unpriced restaurants, i.e. restaurants for which a
+price range has not yet been assigned via user concensus, are, however, not only
+considerably more positively rated, but also in a seemingly linear fashion:
 
- #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_vvM4L9Z2.png  :tangle ./yelp.r
-   b <- business[business$review_count > 20, ]
-   ggplot(b[is.na(b$price.range),], aes(x=stars.avg)) +
-       geom_histogram(binwidth=.10, color='orange', fill='orange') +
-       ylab('Count') +
-       xlab('Rating average (mean)') +
-       labs(fill="Price Range") +
-       ggtitle('Distribution of ratings for unpriced businesses by price range')
- #+END_SRC
+#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_vvM4L9Z2.png  :tangle ./yelp.r
+  b <- business[business$review_count > 20, ]
+  ggplot(b[is.na(b$price.range),], aes(x=stars.avg)) +
+      geom_histogram(binwidth=.10, color='orange', fill='orange') +
+      ylab('Count') +
+      xlab('Rating average (mean)') +
+      labs(fill="Price Range") +
+      ggtitle('Distribution of ratings for unpriced businesses by price range')
+#+END_SRC
 
- #+RESULTS:
- [[file:./img/R_vvM4L9Z2.png]]
+#+RESULTS:
+[[file:./img/R_vvM4L9Z2.png]]
 
- We can see clearly that there is a much more siginificant positive skew for
- these unrated restaurants. This begs the question, is there a downward tendency
- for restaurant ratings as their profiles mature? The fact that unrated
- restaurants tend to be less those with less mature profiles is glaringly
- suspicious.
+We can see clearly that there is a much more siginificant positive skew for
+these unrated restaurants. This begs the question, is there a downward tendency
+for restaurant ratings as their profiles mature? The fact that unrated
+restaurants tend to be less those with less mature profiles is glaringly
+suspicious.
 
