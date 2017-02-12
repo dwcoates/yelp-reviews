@@ -5,7 +5,7 @@
 
 * Core   :noexport:
 [[http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/][multiplot function]]
-#+BEGIN_SRC R :session :exports none :results output org  :tangle ./yelp.r
+#+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
   # Multiple plot function
   #
   # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
@@ -53,10 +53,6 @@
   }
 #+END_SRC
 
-#+RESULTS:
-#+BEGIN_SRC org
-#+END_SRC
-
 * Introduction
 The ubiquity of user review services is a modern phenomenon, being perhaps one
 of the most obvious and profoundly popular uses of the internet. Do you need to
@@ -70,6 +66,7 @@ context; the entry point being an investigation into the suspicion that
 restaurants in less affluent neighborhoods tend to have higher rating variance
 than those in more affluent neighborhoods.
 * Methodology
+
 This analysis uses the Yelp academic dataset, which consists of about 2.6
 million user reviews, plus some relevant category data (~85k businesses, ~700k
 users, etc). This data is stored natively in json, though the data is quite
@@ -78,11 +75,16 @@ information. Therefore the json was trimmed and converted to a csv format via a
 python script, and the resulting csv files, uncompressed, total ~2 gigabytes on
 disk. R is the language of choice for the analysis, with the data.table often
 coming in handy for its speed.
+
 * Initializing data 
+
   Data has been preprocessed by a small Python script that flattens the source
   json into csv and trims off useless data.
+
 ** Libraries :noexport:
-Necessary libraries
+
+Necessary libraries: 
+
 #+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
   library(ggplot2)
   library(data.table)
@@ -91,10 +93,13 @@ Necessary libraries
   options(asciiType = "org")
   options(max.print = 200)
 #+END_SRC
+
 ** Data :ignore:
+
 Need to load up about 2.3 gigabytes of tabular data and keep track of read
 time. Thankfully ~fread~ from the the ~data.table~ package makes this process an
 order of magnitude or two faster than R Base's ~read.csv~:
+
 #+BEGIN_SRC R :session :exports none :cache no :tangle ./yelp.r
   read_table <- function(filename) {                                          
       table <- fread(filename)  # use fread to quickly read csv file
@@ -121,7 +126,6 @@ order of magnitude or two faster than R Base's ~read.csv~:
 
 #+RESULTS[a89ba1709758873becea8679fe72f2880558629e]:
 
-
 #+BEGIN_SRC R :session :exports results :results org :tangle ./yelp.r
   total_load_time <- reviews_t + tips_t + business_t + users_t + checkins_t
   sprintf("Time to load CSV data into data.frames: %.2f minutes", total_load_time["elapsed"]/60.0)
@@ -129,7 +133,7 @@ order of magnitude or two faster than R Base's ~read.csv~:
 
 #+RESULTS:
 #+BEGIN_SRC org
-Time to load CSV data into data.frames: 0.54 minutes
+Time to load CSV data into data.frames: 0.19 minutes
 #+END_SRC
 
 * Preprocessing
@@ -137,6 +141,7 @@ Zip code info for each business would be quite helpful for looking into the
 demographical review trends. However, ZIP code info is not explicitly
 required of businesses when registering with Yelp, so we have to see how easily
 they can be extracted from from the 'full address' data for each business.
+
 ** ZIP codes
 #+BEGIN_SRC R :session :exports none :results none :tangle ./yelp.r
   grab_zip <- function(address) {
@@ -187,6 +192,7 @@ using restaurant price range, and not restaurant neighborhood median income (or
 the like), as a feauture of interest.  It may be fun to at some point put in the
 work/money to produce the zip code information.
 ** Additional categories and misc data cleaning :ignore:
+
 #+BEGIN_SRC R :session :exports none :results  none :tangle ./yelp.r
   business <- merge(business, 
                     rename(aggregate(stars ~ business_id,
@@ -200,8 +206,10 @@ work/money to produce the zip code information.
                                                                 'Medium High',
                                                                 'High'))
 #+END_SRC
+
 * Distribution
 ** Inconsistency of ratings
+
  #+BEGIN_SRC R :session :exports code :results none :cache no :tangle ./yelp.r
    star_variance <- merge(aggregate(stars ~ business_id,
                                     data = reviews, 
@@ -213,10 +221,28 @@ work/money to produce the zip code information.
                           by = 'business_id')
    star_variance <- rename(star_variance, stars.var = stars)
  #+END_SRC
-*** stars.var ~ price.range
+
+*** Load Shiny 
+
+Load up the shiny app.
+
+#+BEGIN_SRC R :session :exports code :results none
+  source("./shiny/server.r")
+  source("./shiny/ui.r")
+#+END_SRC
+
+We can see the app here:
+
+#+BEGIN_SRC R :session :exports code :results none 
+  runExample("my-shiny")
+#+END_SRC
+
+*** ~stars.var~ ~ ~price.range~
+
    We can aggregate the businesses by price range and average out their rating
    variance to get an idea about how restaurant pricing correlates with reviewer
    consistency:
+
    #+NAME: star_var
    #+BEGIN_SRC R :session :exports both :colnames yes :tangle ./yelp.r
      aggregate(stars.var ~ price.range, data = star_variance, FUN = mean)
@@ -261,34 +287,34 @@ work/money to produce the zip code information.
 
   #+NAME: star-dists
   #+BEGIN_SRC R :session :exports none :results silenced :cache no :tangle ./yelp.r
-    star_freq<- function(r, rating) {
+    rating_freq <- function(r, rating) {
         sum(r == rating)/length(r)
     }
     # There is definitely a nicer way to do this, but I'm done with that 
     # rabbit hole.
     s1 <- rename(aggregate(stars ~ business_id,
                            data=reviews,
-                           FUN=function(stars) star_freq(stars, 1)),
+                           FUN=function(stars) rating_freq(stars, 1)),
                  one=stars)
 
     s2 <- rename(aggregate(stars ~ business_id,
                            data=reviews,
-                           FUN=function(stars) star_freq(stars, 2)),
+                           FUN=function(stars) rating_freq(stars, 2)),
                  two=stars)
 
     s3 <- rename(aggregate(stars ~ business_id,
                            data=reviews,
-                           FUN=function(stars) star_freq(stars, 3)),
+                           FUN=function(stars) rating_freq(stars, 3)),
                  three=stars)
 
     s4 <- rename(aggregate(stars ~ business_id,
                            data=reviews,
-                           FUN=function(stars) star_freq(stars, 4)),
+                           FUN=function(stars) rating_freq(stars, 4)),
                  four=stars)
 
     s5 <- rename(aggregate(stars ~ business_id,
                            data=reviews,
-                           FUN=function(stars) star_freq(stars, 5)),
+                           FUN=function(stars) rating_freq(stars, 5)),
                  five=stars)
 
 
@@ -302,7 +328,7 @@ work/money to produce the zip code information.
   #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_LfYln761.png  :tangle ./yelp.r
     library(scales)
     r <- filter(business, review_count > 100)
-    ggplot(r, aes(x=one, y=five, color = price.range)) +
+    ggplot(r, aes(x=one, y=five, color="orange")) +
         geom_point() +
         scale_x_continuous(labels = percent) +
         scale_y_continuous(labels = percent) + 
@@ -310,37 +336,14 @@ work/money to produce the zip code information.
              x = ("One star"),
              y = ("Five star"), 
              title="Rating composition: five-star vs one-star") 
-
   #+END_SRC
 
   #+RESULTS: basic-star-var-graph
   [[file:./img/R_LfYln761.png]]
 
-  #+BEGIN_SRC R :session :exports none :results output org  :tangle ./yelp.r
-    g1 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 1)), one=stars)
-    g2 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 2)), two=stars)
-    g3 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 3)), three=stars)
-    g4 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 4)), four=stars)
-    g5 <- rename(aggregate(stars ~ business_id, data=reviews, FUN=function(stars) star_freq(stars, 5)), five=stars)
+*** ~stars.var~ ~ ~stars.avg~
 
-    business <- merge(business, Reduce(merge,list(g1, g2, g3, g4, g5)), by="business_id")
-  #+END_SRC
-
-  #+BEGIN_SRC R :session :exports both :results output org  :tangle ./yelp.r
-    star_freq<- function(rs) {   
-        tabulate(rs)/length(rs)
-    }
-
-    business <- merge(rename(aggregate(stars ~ business_id,
-                                       data=reviews,
-                                       FUN=star_freq),
-                             stars.dist=stars),
-                      business,
-                      by="business_id")
-  #+END_SRC
-
-*** stars.var ~ stars.avg
-   So, we see that the rating variance for restaurants correlates negatively
+   So, we see that the rating  for restaurants correlates negatively
    with their average ratings. That is, poorly rated restaurants have a tendency
    to also have more varied ratings. A possible conclusion is that restaurant
    ratings are simply skewed positively, and therefore deviation from mean
@@ -375,7 +378,8 @@ work/money to produce the zip code information.
   not a unique idea]]). For reference, the mean business rating is a rather high
   src_R[:session]{sprintf("%.2f", mean(business$stars.avg))} {{{results(=3.69=)}}} stars.
 
-*** stars.avg ~ price.range                                          :ignore:
+*** ~stars.avg~ ~ ~price.range~                                        :ignore:
+
     In any case, we might still wonder why there exists this correlation between
     rating inconsistency and average rating, yet also no such correlation
     whatsoever between rating inconsistency and restaurant expensiveness,
@@ -409,6 +413,7 @@ way, I've normalized my perspective on the restaurant, but without actually
 yielding me any bang-for-the-buck measure. I consider this a bad and unhelpful
 way to contribute my opinion on the business, but this is the way that I feel I
 am most naturally inclined.
+
 ** Price distribution
 The pricing makeup of our positively skewed restaurant rating distribution is
 not particularly surprising:
@@ -447,8 +452,6 @@ for restaurant ratings as their profiles mature? The fact that unrated
 restaurants tend to be less those with less mature profiles is glaringly
 suspicious.
 
-** TODO Sample businesses by first 20 or so reviews (chronologically)
-- See if they have a similar distribution to this rating average stuff
 ** REST
 #+BEGIN_SRC R :session :exports both :results output graphics :file ./img/R_3EqwcmXp.png  :tangle ./yelp.r
 s <- star_variance[star_variance$review_count > 20, ]
