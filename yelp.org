@@ -135,7 +135,7 @@
 
    #+RESULTS:
    #+BEGIN_SRC org
-     Time to load CSV data into data.frames: 0.73 minutes
+   Time to load CSV data into data.frames: 0.70 minutes
    #+END_SRC
 
 * Preprocessing
@@ -180,7 +180,7 @@
 
    #+RESULTS:
    #+BEGIN_SRC org
-     12.95% of restaurants have undecipherable zip codes
+   12.61% of restaurants have undecipherable zip codes
    #+END_SRC
 
    Upon closer inspection, it also turns out that generally businesses do not provide
@@ -199,7 +199,7 @@
 
    #+RESULTS:
    #+BEGIN_SRC org
-     Done.
+   Done.
    #+END_SRC
 
    While geographical coordinates are readily at hand, unfortunately reverse
@@ -213,8 +213,8 @@
 
 * Analysis
 
-A good place to start might be to check out the standard deviation of these
-ratings, and get a feel about how they correlate with business expensiveness.
+  A good place to start might be to check out the standard deviation of these
+  ratings, and get a feel about how they correlate with business expensiveness.
 
 ** ~stars.sd~ in terms of  ~price.range~
 
@@ -261,7 +261,7 @@ ratings, and get a feel about how they correlate with business expensiveness.
 
    #+RESULTS: sd_vs_rating
    #+BEGIN_SRC org
-     -0.495482428812402
+   -0.495482428812402
    #+END_SRC
 
    #+BEGIN_SRC R :session :exports results :results org :var x=sd_vs_rating :tangle ./yelp.r
@@ -271,7 +271,7 @@ ratings, and get a feel about how they correlate with business expensiveness.
 
    #+RESULTS:
    #+BEGIN_SRC org
-     Correlation between rating sd and rating average: -0.50
+   Correlation between rating sd and rating average: -0.50
    #+END_SRC
 
 ** ~stars.avg~ distribution
@@ -317,21 +317,33 @@ ratings, and get a feel about how they correlate with business expensiveness.
    #+RESULTS:
    [[file:./img/R_CCa0S6lS.png]]
     
-   Above we see that the average restaurant rating shows significant positive
-   skew, and therefore the first hypothesis seems a bit more be believable. Most
-   people who have experience with the internet, and therefore have some
-   familiarity with online rating systems like Yelp, probably have an intuitive
-   idea about this tendency for these ratings systems to have a very strong
-   positive skew. I suspect a major reason for this is perceived social pressure,
-   particularly in the case of a Facebook-driven website such as Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is
-   not a unique idea]]). For reference, the mean business rating is a rather high
-   src_R[:session]{sprintf("%.2f", mean(business$stars.avg))} {{{results(=3.69=)}}} stars.
+   Above we see that the average restaurant rating shows significant positive skew,
+   and therefore the first hypothesis seems a bit more be believable. Most people
+   who have experience with the internet, and therefore have some familiarity with
+   online rating systems like Yelp, probably have an intuitive idea about this
+   tendency for these ratings systems to have a very strong positive skew. I
+   suspect a major reason for this is perceived social pressure, particularly in
+   the case of a Facebook-driven website such as Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is not a unique
+   idea]]). For reference, the mean business rating is a rather high
+   src_R[:session]{sprintf("%.2f", mean(business$stars.avg))} {{{results(=3.69=)}}}
+   stars.
+
+#+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_HICyzHBj.png 
+library(fitdistrplus)
+library(logspline)
+
+fit.norm <- fitdist(business$stars.avg, "norm")
+plot(fit.norm)
+#+END_SRC
+
+#+RESULTS:
+[[file:./img/R_HICyzHBj.png]]
 
 ** ~stars.avg~ ~ ~price.range~                                           :ignore:
 
    In any case, we might still wonder why there exists this correlation between
-   rating inconsistency and average rating, yet also no such correlation
-   whatsoever between rating inconsistency and restaurant expensiveness,
+   rating standard deviation and rating mean, yet also no such correlation
+   whatsoever between rating standard deviation and business expensiveness,
    statements which we might expect, possibly naively, to be quite similar
    (i.e., more expensive restaurants are generally rated more highly). The
    reason for this lack of correlation is because this is indeed a naive
@@ -362,13 +374,15 @@ ratings, and get a feel about how they correlate with business expensiveness.
    yielding me any bang-for-the-buck measure. I consider this a bad and unhelpful
    way to contribute my opinion on the business, but this is the way that I feel I
    am most naturally inclined.
-
+   
 ** Central tendency
 
    So we've gotten a bit far at this point from the original idea of the effect
    of neighborhood demographics on rating consistency, but this might still be
-   something worth exploring. We can look at the relationship between five-star
-   and one-star vote rates for all businesses:
+   something worth exploring a bit. We can look at the relationship between
+   five-star and one-star vote rates for all businesses. Below is a graph that
+   plots every business and its rate of 5-star ratings vs its rate of 1-star
+   ratings.
 
    #+NAME: star-dists
    #+BEGIN_SRC R :session :exports none :results silenced :cache no :tangle ./yelp.r
@@ -425,6 +439,8 @@ ratings, and get a feel about how they correlate with business expensiveness.
 
    #+RESULTS: basic-star-sd-graph
    [[file:./img/R_LfYln761.png]]
+
+
 
 ** Price distribution
 
