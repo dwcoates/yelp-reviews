@@ -93,6 +93,21 @@ def process_val(val, delim):
     return val
 
 
+import gzip
+fp = gzip.open('foo.gz')
+contents = fp.read()  # contents now has the uncompressed bytes of foo.gz
+fp.close()
+u_str = contents.decode('utf-8')  # u_str is now a unicode string
+lines = u_str.split('\n')
+for line in lines:
+    j = json.loads(line)
+    # csvwriter is defined with output file
+    # ...
+    # ... Process j ...
+    # ...
+    csvwriter.writerow(row)
+
+
 def csvify_to_file(headers, infile, outfile):
     """
     Flatten the json entry. This is pretty simple, and relies on a bit
@@ -103,12 +118,30 @@ def csvify_to_file(headers, infile, outfile):
         csvwriter = csv.writer(outs)
         csvwriter.writerow(headers)  # write header to top of file
         for line in ins:
-            j = json.loads(line)
+            j = json.loads(line.decode("utf-8"))
             row = []
             for h in headers:
                 row += [process_val(findval(j, h), "<+#+>")]
             csvwriter.writerow(row)
 
+
+# option 1
+import gzip
+fp = gzip.open('foo.gz')
+x = json.load(fp.read())
+
+
+# option 2
+gzip.open('file.gz', 'rt', encoding='utf-8')
+
+
+# option 3
+import codecs
+zf = gzip.open(fname, 'rb')
+reader = codecs.getreader("utf-8")
+contents = reader(zf)
+for line in contents:
+    pass
 
 # Convert the businesses file to csv
 print("Processing five json files:")
@@ -131,6 +164,7 @@ print("[3/5] Converting (big) 'review' json file to csv...")
 review_file = "data/json_origin/yelp_academic_dataset_review.json"
 review_headers = allkeys(review_file)
 csvify_to_file(review_headers, review_file, "data/review.csv")
+
 
 # Convert the tips file to csv
 print("[4/5] Converting 'tip' json file to csv...")
