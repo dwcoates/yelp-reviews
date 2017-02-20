@@ -1,7 +1,7 @@
 
 #+TITLE: Sensibility of Yelp Rating Trends
 
-* Meta :noexport:
+* Meta   :noexport:
 
 #+HTML_HEAD: <link href="/home/dodge/.emacs.d/leuven-theme.css" rel="stylesheet">
 #+OPTIONS: toc:2 num:nil
@@ -138,7 +138,7 @@
 
    #+RESULTS:
    #+BEGIN_SRC org
-   Time to load CSV data into data.frames: 0.70 minutes
+   Time to load CSV data into data.frames: 0.63 minutes
    #+END_SRC
 
 * Pre-processing
@@ -183,7 +183,7 @@
 
    #+RESULTS:
    #+BEGIN_SRC org
-   12.61% of restaurants have undecipherable zip codes
+   11.95% of restaurants have undecipherable zip codes
    #+END_SRC
 
    Upon closer inspection, it also turns out that generally businesses do not provide
@@ -245,10 +245,10 @@
    #+RESULTS: star_sd
    | price.range |         stars.sd |
    |-------------+------------------|
-   | Low         | 1.16433060289368 |
-   | Medium Low  | 1.13643870527806 |
-   | Medium High | 1.16592351988962 |
-   | High        | 1.22361228286889 |
+   | Low         | 1.19962268215609 |
+   | Medium Low  | 1.18899750838174 |
+   | Medium High | 1.19447620463636 |
+   | High        |  1.2500955532786 |
 
    It seems that the correlation between rating inconsistency and restaurant
    expensiveness is neglibile. This is strange, because you might expect a
@@ -264,7 +264,7 @@
 
    #+RESULTS: sd_vs_rating
    #+BEGIN_SRC org
-   -0.495482428812402
+   -0.399810003517492
    #+END_SRC
 
    #+BEGIN_SRC R :session :exports results :results org :var x=sd_vs_rating :tangle ./yelp.r
@@ -274,7 +274,7 @@
 
    #+RESULTS:
    #+BEGIN_SRC org
-   Correlation between rating sd and rating average: -0.50
+   Correlation between rating sd and rating average: -0.40
    #+END_SRC
 
 ** ~stars.avg~ distribution
@@ -328,7 +328,7 @@
    suspect a major reason for this is perceived social pressure, particularly in
    the case of a Facebook-driven website such as Yelp ([[http://sloanreview.mit.edu/article/the-problem-with-online-ratings-2/][which is not a unique
    idea]]). For reference, the mean business rating is a rather high
-   src_R[:session]{sprintf("%.2f", mean(business$stars.avg))} {{{results(=3.69=)}}}
+   src_R[:session]{sprintf("%.2f", mean(business$stars.avg))} {{{results(=3.52=)}}}
    stars.
 
 #+BEGIN_SRC R :session :exports results :results output graphics :file ./img/R_HICyzHBj.png 
@@ -442,8 +442,12 @@ plot(fit.norm)
 
    #+RESULTS: basic-star-sd-graph
    [[file:./img/R_LfYln761.png]]
+   
+*** Shiny app
 
-
+#+BEGIN_SRC R :session :exports none :results none 
+shiny::runApp("./shiny")
+#+END_SRC
 
 ** Price distribution
 

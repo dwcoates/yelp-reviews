@@ -11,9 +11,12 @@ function(input, output) {
   #  2) Its output type is a plot
 
   output$distPlot <- renderPlot({
-    x    <- faithful[, 2]  # Old Faithful Geyser data
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
+    r <- filter(business, review_count > input$ReviewCount & as.numeric(price.range) == input$PriceRange)
 
-    # draw the histogram with the specified number of bins
-    hist(x, breaks = bins, col = 'darkgray', border = 'white')
+    ggplot(r, aes(x=one, y=four, color = price.range)) +
+        geom_point() +
+        guides(color=FALSE) +
+        scale_y_continuous(limits = c(0, 1)) +
+        scale_x_continuous(limits = c(0, 1)) +
+        ggtitle("Low Price Businesses")
   })}
