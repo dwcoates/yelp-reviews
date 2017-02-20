@@ -1,7 +1,10 @@
-#+HTML_HEAD: <link href="/home/dodge/.emacs.d/leuven-theme.css" rel="stylesheet">
-#+OPTIONS: toc:2 num:nil
 
 #+TITLE: Sensibility of Yelp Rating Trends
+
+* Meta :noexport:
+
+#+HTML_HEAD: <link href="/home/dodge/.emacs.d/leuven-theme.css" rel="stylesheet">
+#+OPTIONS: toc:2 num:nil
 
 * Core   :noexport:
   [[http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/][multiplot function]]
@@ -138,7 +141,7 @@
    Time to load CSV data into data.frames: 0.70 minutes
    #+END_SRC
 
-* Preprocessing
+* Pre-processing
 ** Additional categories and misc data cleaning :noexport:
 
    #+BEGIN_SRC R :session :exports none :results  none :tangle ./yelp.r
